@@ -1,0 +1,127 @@
+.TH ERRTXT 3-local "94/05/16"
+.SH NAME
+errtxt, errnotxt, geterrno, seterrno \- handles error messages
+.SH COPYRIGHT
+Copyright \(co 1992 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """errors.h"""
+.LP
+.B extern int usr_ferr, usr_lerr;
+.B extern char *usr_errlist[];
+.LP
+.B char *errtxt(err,text)
+.B int err;
+.B char *text;
+.LP
+.B char *errnotxt(text)
+.B char *text;
+.LP
+.B int geterrno()
+.LP
+.B int seterrno(error)
+.B int error;
+.fi
+.SH DESCRIPTION
+.B errtxt
+and
+.B errnotxt
+return in the buffer
+.I text
+an error message corresponding to the value of the error number
+.I err
+or the value of the global system error number
+.B errno
+respectively. If the error number in
+.I err
+or
+.B errno
+is in the range
+.LP
+( 0 < number <
+.B sys_nerr
+)
+.LP
+then the message returned is the corresponding text from the system
+error message table
+.BR sys_errlist .
+If the error number is in the range
+.LP
+(
+.B usr_ferr
+<= number <=
+.B usr_lerr
+)
+.LP
+then the message returned is the corresponding text from the user
+error message table
+.BR usr_errlist .
+Otherwise, the text is in the form
+.B Error
+.I nnn
+where
+.I nnn
+is the error number.
+.LP
+If the calling application does not define
+.B usr_ferr
+(first user error number),
+.B usr_lerr
+(last user error number), and
+.BR usr_errlist ,
+then a default (empty) user error message table is used. (All three
+global variables must be defined or omitted or else ld-time errors are
+likely to occur.) These global (but unchanging) variables permit an
+application to use error numbers beyond those supplied by the system,
+and handle both user and system error messages in a consistent
+fashion.
+.LP
+.B geterrno
+and
+.B seterrno
+are wrappers (defined as macros in the
+.B errors.h
+header file)
+to access and change the value of the global static variable
+.BR errno .
+.B geterrno
+returns the current value of
+.BR errno .
+.B seterror
+sets the value of
+.B errno
+to
+.IR error ,
+and returns that value. 
+.B geterrno
+and
+.B seterrno
+are used as "insurance policies" in the
+.B libtools
+code for when the day comes that
+.B errno
+cannot be used reliably because such usage is not reentrant, and hence
+not thread-safe. It is hoped that whatever error reporting mechanism is
+available in a thread-library can be used in functions that will be
+substituted for these macros.
+.SH "RETURN VALUES"
+.B errtxt
+and
+.B errnotxt
+return the value of
+.IR text .
+.LP
+.B geterrno
+and
+.B seterrno
+return the current value of the
+.B errno
+variable.
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)errtxt.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

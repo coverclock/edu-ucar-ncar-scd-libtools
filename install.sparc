@@ -1,0 +1,78 @@
+#!/bin/sh
+# @(#)install.sparc	1.2 94/06/03 jsloan@ncar.ucar.edu
+# Makes standard and nmalloc libraries without pthreads on the SPARC
+
+ROOT=/usr/local/mss
+CDEBUG=""
+RELEASE=
+
+cd libtools$RELEASE
+
+CUSTOMIZATIONS="-DBUFFERS_STATS -DKEYVAL_STATS -DSKIPLIST_STATS -DSKEYVAL_STATS -DWINDOWSIZE_TIOCGWINSZ -DWINDOWSIZE_TERMCAP -DCACHE_TRACE -DTIMECLOCK_GETTIMEOFDAY -DENUSER_SETEUID"
+
+rm -f *.o
+rm -f libtools.a
+make install \
+	NAME=libtools \
+	CUSTOMIZATIONS="$CUSTOMIZATIONS" \
+	ROOT=$ROOT \
+	CC=gcc \
+	CDEBUG="$CDEBUG"
+
+rm -f *.o
+rm -f dbgtools.a
+make install \
+	NAME=dbgtools \
+	CUSTOMIZATIONS="$CUSTOMIZATIONS -DNMALLOC_LIBTOOLS" \
+	ROOT=$ROOT \
+	CC=gcc \
+	CDEBUG="$CDEBUG"
+
+cd ..
+cd libipc$RELEASE
+
+CUSTOMIZATIONS=""
+
+rm -f *.o
+rm -f libipc.a
+make install \
+	NAME=libipc \
+	CUSTOMIZATIONS="$CUSTOMIZATIONS" \
+	ROOT=$ROOT \
+	CC=gcc \
+	CDEBUG="$CDEBUG"
+
+rm -f *.o
+rm -f dbgipc.a
+make install \
+	NAME=dbgipc \
+	CUSTOMIZATIONS="$CUSTOMIZATIONS -DNMALLOC_LIBTOOLS" \
+	ROOT=$ROOT \
+	CC=gcc \
+	CDEBUG="$CDEBUG"
+
+rm -f *.o
+cd ..
+cd libmessages$RELEASE
+
+CUSTOMIZATIONS="-DMESSAGES_STATS -DMGENERIC_STATS"
+
+rm -f *.o
+rm -f libmessages.a
+make install \
+	NAME=libmessages \
+	CUSTOMIZATIONS="$CUSTOMIZATIONS" \
+	ROOT=$ROOT \
+	CC=gcc \
+	CDEBUG="$CDEBUG"
+
+rm -f *.o
+rm -f dbgmessages.a
+make install \
+	NAME=dbgmessages \
+	CUSTOMIZATIONS="$CUSTOMIZATIONS -DNMALLOC_LIBTOOLS" \
+	ROOT=$ROOT \
+	CC=gcc \
+	CDEBUG="$CDEBUG"
+
+cd ..

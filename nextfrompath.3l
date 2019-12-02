@@ -1,0 +1,108 @@
+.TH NEXTFROMPATH 3-local "94/05/16"
+.SH NAME
+nextfrompath \- simple path parsing routine
+.SH COPYRIGHT
+Copyright \(co 1994 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """nextfrompath.h"""
+.sp
+.B char *nextfrompath(in,out,len)
+.B char *in;
+.B char *out;
+.B int len;
+.LP
+.fi
+.SH DESCRIPTION
+.B nextfrompath
+parses the next
+.IR word ,
+either a slash (/) or a subpath component,
+from the nul terminated path pointed
+to by
+.BR in .
+.B in
+should be initialized with the starting address of the path
+for the first call, and be assigned the value returned by
+.B nextfrompath
+for successive calls.
+The word is copied into the buffer
+.BR out ,
+which is at least
+.B len
+bytes long. Any words longer than
+.B len
+are silently truncated. The caller can avoid this by providing an
+.B out
+buffer that is at least as long as the
+.B in
+buffer (including the terminating nul). If the parsed word is
+.B len
+bytes or longer, there will not be room for a terminating nul in
+.BR out .
+The caller can avoid this by using an
+.B out
+buffer that is one byte longer than
+.BR len ,
+and placing a nul in the last position of
+.BR out .
+.SH SYNTAX
+A
+.I word
+is a string of characters delimited by the beginning of the buffer,
+the end of the buffer, or an unescaped
+and unquoted slash (/), newline or return.
+.LP
+A string of characters, including slashes, can be collected as a
+single word if enclosed in matching single (\') or double (") quotes.
+A single quote inside a double quoted string (or vice versa) is taken
+literally and not interpreted. Quotes do not delimit words; hence
+quoted strings can be embedded inside a word. Interpreted quotes are
+not placed in the output buffer. A quoted string can be terminated
+prematurely by an unescaped newline or return, the end of buffer, or
+the end of the input stream.
+.LP
+The backslash (\\) can be used to escape the normal interpretation of
+a character. The semantics of escaped characters depends upon the
+character being escaped. A quoted slash is collected as just another
+character.
+.LP
+An escaped blank, horizontal tab, single quote, double quote, newline,
+poundsign, return, or any unprintable ASCII character other than nul
+(which terminates an ASCII string) is taken literally and deposited in
+the output buffer. The backslash is discarded, and parsing continues
+with the following character. This can be used to embed bells and
+whistles (so to speak) in the string.
+.LP
+Any other escaped printable ASCII character which has no special meaning
+to the parser is deposited in the output buffer preceeded by the escape
+backslash. This allows C-style escape sequences such as \\n, \\t, and
+\\007 to be retained.
+.LP
+Unless escaped, unprintable ASCII characters are silently ignored, even
+if they appear inside quotes.
+.SH "RETURN VALUES"
+.B nextfrompath
+returns a pointer that should be used as the
+.B in
+argument for the next call. If NULL is returned, then the end of the
+buffer has been reached and
+.B out
+is unchanged.
+.LP
+Input words can be truncated
+if the internal context stack inside the parser
+overflows. The author believes that this is currently impossible given
+the syntax of the language being parsed. If it does occur, it is caused
+by too deeply nested contexts, for example, nested quotes.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR escapes (3l)
+.BR nextparser (3l)
+.SH VERSION
+@(#)nextfrompath.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

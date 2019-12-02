@@ -1,0 +1,128 @@
+.TH PACKET 3-local "94/05/16"
+.SH NAME
+packet - data structure for parameter passing
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """packet.h"""
+.LP
+.B PACKET *unbundlepacket(parcel)
+.B PARCEL parcel;
+.LP
+.B PARCEL *bundlepacket(packet,parcelp)
+.B PACKET *packet;
+.B PARCEL *parcelp;
+.LP
+.B PACKET *unstuffpacket(portfolio)
+.B PORTFOLIO *portfolio;
+.LP
+.B PORTFOLIO *stuffpacket(packet,portfolio)
+.B PACKET *packet;
+.B PORTFOLIO *portfolio;
+.LP
+.B PACKETLENGTH packetlength(packet)
+.B PACKET *packet;
+.LP
+.B int freepacket(packet)
+.B PACKET *packet;
+.fi
+.SH DESCRIPTION
+This module contains a set of functions which together provide a
+mechanism for efficiently handling parameters under a variety of
+circumstances. Parameters are in the form of keyword-value pairs, where
+the unique keyword and its value are ASCII strings.  There are seven
+complementary data structures: PARCEL, PACKAGE, PILE, PACKET,
+PARMFILE, PORTFOLIO, and ARGVECTOR.
+.LP
+In the function signatures in the synopsis above, the formal parameters
+have the following meanings.
+.LP
+.I parcel
+is a variable which contains the pointer that is the root of the tree
+that is the PARCEL data structure.
+.LP
+.I parcelp
+is a value/result argument which is the address of a PARCEL variable
+(i.e. &parcel).
+.LP
+.I portfolio
+points to a PORTFOLIO data structure.
+.LP
+.I packet
+is a pointer to an area of memory which is a PACKET of parameters.
+.LP
+.B unbundlepacket
+unbundles (converts)
+.I parcel
+into a PACKET. A pointer to the PACKET is returned.
+The memory associated with the PACKET data structure is
+dynamically acquired and should eventually be freed if the memory
+is to be recovered and reused.
+.LP
+.B bundlepacket
+bundles the parameters in
+.I packet
+into
+.I parcelp.
+The function returns the value of
+.IR parcelp .
+.LP
+.B unstuffpacket
+and
+.B stuffpacket
+are corresponding routines that deal with PORTFOLIOS instead of
+PARCELS.
+.LP
+.B packetlength
+returns the length of
+.I packet
+in bytes. Unlike a PACKAGE, a PACKET is not a character string; hence
+.B strlen
+cannot be used to determine its length.
+.LP
+.B freepacket
+frees the dynamically allocated memory associated with a PACKET.
+.LP
+A PACKET is a structure which stores the parameter list in a linear form
+which can be read, written, sent and received in a manner similar to
+a PACKAGE, but which is not necessarily human readable. The conversion
+between PARCELs and PACKETs is more time and space efficient
+that that between PARCELs and PACKAGEs. It is typically used in
+interprocess message passing applications. Binary header information
+contained in a PACKET is kept in network byte order.
+.SH "RETURN VALUES"
+All functions which return a pointer return NULL when an error is
+detected; errno is set appropriately. All functions which return
+an integer return a negative number when an error is detected; errno
+is set appropriately.
+.LP
+In the instances where a PARCEL is returned, NULL may also mean
+that the PARCEL is empty, in which case errno is set to zero.
+The PORTFOLIO functions have no such defect.
+.SH ERRORS
+Virtually the only errors which are returned are the following.
+.TP 20
+.SM EINVAL
+An invalid argument, such as NULL where an address was expected, was
+passed to the function.
+.TP
+.SM ENOMEM
+Memory could not be allocated for the dynamic structures.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR parcel (3l),
+.BR portfolio (3l),
+.BR package (3l),
+.BR pile (3l),
+.BR parmfile (3l),
+.BR escapes (3l),
+.BR nextparser (3l),
+.BR messages (3l)
+.SH VERSION
+@(#)packet.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

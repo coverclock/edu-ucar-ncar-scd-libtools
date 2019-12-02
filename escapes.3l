@@ -1,0 +1,181 @@
+.TH ESCAPES 3-local "94/09/29"
+.SH NAME
+esclapse, escpand \- collapse/expand escaped characters in a string
+.SH COPYRIGHT
+Copyright \(co 1990, 1991, 1992, 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B include """escapes.h"""
+.LP
+.B char *esclapseto(from,two)
+.B char *from;
+.B char *two;
+.LP
+.B BUFFER esclapsenew(from)
+.B char *from;
+.LP
+.B BUFFER esclapse(old)
+.B BUFFER old;
+.LP
+.B char *escpandto(from,two)
+.B char *from;
+.B char *to;
+.LP
+.B BUFFER escpandnew(from)
+.B char *from;
+.LP
+.B BUFFER escpand(old)
+.B BUFFER old;
+.LP
+.B int esclapsein(string,length)
+.B char *string;
+.B int length;
+.fi
+.SH DESCRIPTION
+This family of functions handle the conversion between character strings
+and ANSI C-style escape sequences. (The functions understand ANSI C-style
+escape sequences even if the module is compiled on a non-ANSI C
+compiler.)
+.LP
+Although they can be used alone, they are
+be most often used in conjunction with the
+.BR nextparser (3l)
+and
+.BR parcel (3l)
+parsing and parameter handling functions. Some of these functions also make
+use of the dynamically allocated string bufferss provided by
+.BR buffers (3l).
+.LP
+.B esclapse
+and its kin collapse ANSI C-style escape sequences of the form
+\\\fIc\fR, where \fIc\fR is a single character (for example, \\a, \\b,
+\\f, \\n, \\r, \\t or \\v), \\\fIooo\fR where \fIooo\fR is at most
+three octal digits representing the ASCII value of the character, or
+\\x\fIXX\fR where \fIXX\fR is exactly two hexadecimal digits
+representing the ASCII value of the character. All such sequences are
+collapsed down to a single character.
+.LP
+.B escpand
+and its kin expand a string into a form compatible with
+.BR esclapse ,
+.BR keyword (3l)
+and
+.B nextparser
+by escaping embedded double and single quotes, backslashes, and
+poundsigns, and generating \\\fIc\fR or \\\fIooo\fR-style escape sequences
+for any non-printable characters.
+.LP
+.B esclapseto
+and
+.B escpandto
+translate the string pointed to by
+.I from
+into the buffer pointed to by
+.IR to .
+.I to
+is assumed to be large enough.
+.LP
+.B esclapsenew
+and
+.B escpandnew
+translate the string pointed to by
+.I from
+and return pointer to the result in a dynamically allocated string buffer
+managed by
+.BR buffers .
+The memory allocated for this string buffer must be managed, e.g.
+explicitly released using
+.BR buffree ;
+otherwise a memory leak will result. These
+functions are useful because they guarantee that the string buffer has
+enough memory allocated to contain the translated result string. Since the
+.I from
+string is not modified, it can be a regular C string or a dynamic string
+buffer.
+.LP
+.B esclapse
+and
+.B escpand
+translate a string in a dynamic
+.B buffers
+string buffer
+.I old
+and return a pointer to another
+.B buffers
+string buffer that contains the translated result string. The
+.I old
+string buffer is automatically deallocated by the function using
+.BR buffree .
+Not only do these functions insure that the result string buffer is large
+enough, but they can simplify memory management when the
+.I old
+string does not need to be retained.
+.LP
+.B esclapsein
+is a special version which collapses a
+.I string
+of
+.I length
+characters upon itself, returning the length of the resulting string.
+The source string is not necessarily terminated by a null character,
+nor is a null character automatically appended to the output string.
+This is useful for fixed length structure fields or binary data.
+.SH "RETURN VALUES"
+.BR esclapseto ,
+.B esclapsenew
+and
+.B esclapse
+return the address of the collapsed string.
+.LP
+.B esclapsein
+returns the length of the collapsed string.
+.LP
+.BR escpandto ,
+.B escpandtonew
+and
+.B escpand
+return the address of the expanded string.
+.SH BUGS
+.B escpandto
+and
+.B esclapseto
+assume that the output buffer is large enough.
+.LP
+.B escpand
+and its kin
+always escape the backslash, which is rather naive if the string under
+expansion already has escaped characters in it (such as \\t or \\007).
+One way to handle this consistently is to
+.B esclapse
+the string, then
+.B escpand
+it. This will collapse all escaped characters to their character equivalents,
+then expand them in a manner compatible with
+.BR esclapse .
+.LP
+The collapse and expansion of the tab character, \\t, is not symmetric.
+\\t is collapsed into an actual tab, but an actual tab is not expanded
+into a \\t. This is contrary to what a programmer might expect, but it
+appears to be more intuitive to folks using user interfaces built with
+these functions.
+.LP
+These functions support ANSI C-style escape sequences, even if the
+functions are compiled using a non-ANSI C compiler, providing the
+appropriate conditional compilation symbol, ANSI_LIBTOOLS, is \fInot\fR
+defined.
+.LP
+There is some \fIuntested\fR support for EBCDIC character codes for both
+ANSI and non-ANSI C compilers. This might make porting to MVS a little
+easier.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR nextword (3l),
+.BR keyword (3l),
+.BR parcel (3l)
+.SH VERSION
+@(#)escapes.3l	4.7 94/09/29 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

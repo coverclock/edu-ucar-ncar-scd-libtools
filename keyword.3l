@@ -1,0 +1,52 @@
+.TH KEYWORD 3-local "94/05/16"
+.SH NAME
+keyword \- separate keyword from value in a string
+.SH COPYRIGHT
+Copyright \(co 1990 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """keyword.h"""
+.LP
+.B char *keyword(string)
+.B char *string;
+.fi
+.SH DESCRIPTION
+.B keyword
+turns an embedded equal sign
+(``='') into a null character (``\\0''). This has the effect
+of separating a keyword from its value in a string of the form
+``keyword=value''. If there is no equal sign in the string, the
+value is set to a string of zero length by returning the pointer
+to the terminating null character in the argument string.
+.LP
+.B keyword
+uses
+.BR transliterate (3l)
+to parse
+.BR string .
+Escaped equal signs are ignored by the parser, and so can be embedded
+inside keyword or value strings. Equal signs inside quoted strings
+which include other characters are also ignored, providing
+.B keyword
+sees the quotes. Parsing functions such as 
+.BR nextfrombuffer (3l)
+or
+.BR nextfromfile (3l)
+strip quotes from strings as they tokenize their input.
+.SH "RETURN VALUES"
+A pointer to the value portion of the string is returned.
+.SH BUGS
+The original string is modified to terminate the keyword
+portion, although this is really a feature, not a bug.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR transliterate (3l),
+.BR nextparser (3l),
+.BR escapes (3l)
+.SH VERSION
+@(#)keyword.3l	4.3 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

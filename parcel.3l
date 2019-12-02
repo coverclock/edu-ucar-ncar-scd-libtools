@@ -1,0 +1,198 @@
+.TH PARCEL 3-local "94/06/28"
+.SH NAME
+parcel - data structure for parameter passing
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """parcel.h"""
+.LP
+.B PARCEL initparcel(parcelp)
+.B PARCEL *parcelp;
+.LP
+.B char *unbundle(keyword,parcel)
+.B char *keyword;
+.B PARCEL parcel;
+.LP
+.B PARCEL *bundle(keyword,value,parcelp)
+.B char *keyword;
+.B char *value;
+.B PARCEL *parcelp;
+.LP
+.B PARCEL *bundlep(keyword,value,parcelp)
+.B BUFFER keyword;
+.B BUFFER value;
+.B PARCEL *parcelp;
+.LP
+.B PARCEL *rebundle(parcel,parcelp)
+.B PARCEL parcel;
+.B PARCEL *parcelp;
+.LP
+.B PARCEL *enbundle(parcel,parcelp)
+.B PARCEL parcel;
+.B PARCEL *parcelp;
+.LP
+.B int countparcel(parcel)
+.B PARCEL parcel;
+.LP
+.B int freeparcel(parcel)
+.B PARCEL parcel;
+.LP
+.B int travparcel(parcel,g,vp)
+.B PARCEL parcel;
+.B int (*g)(PARCEL node, void *vp);
+.B void *vp;
+.fi
+.SH DESCRIPTION
+This module contains a set of functions which together provide a
+mechanism for efficiently handling parameters under a variety of
+circumstances. Parameters are in the form of keyword-value pairs, where
+the unique keyword and its value are ASCII strings.  There are seven
+complementary data structures: PARCEL, PACKAGE, PILE, PACKET,
+PARMFILE, PORTFOLIO, and ARGVECTOR.
+.LP
+In the function signatures in the synopsis above, the formal parameters
+have the following meanings.
+.LP
+.I parcel
+is a variable which contains the pointer that is the root of the tree
+that is the PARCEL data structure.
+.LP
+.I parcelp
+is a value/result argument which is the address of a PARCEL variable
+(i.e. &parcel).
+.LP
+.I keyword
+points to a character string containing a keyword string, and
+.I value
+points to a character string containing a value string corresponding to the
+keyword.
+.LP
+.B initparcel
+initializes
+.IR parcelp .
+The contents of an existing PARCEL must be freed using
+.B freeparcel
+before it can be reinitialized; otherwise, dynamically allocated
+storage will be lost.
+.LP
+.B unbundle
+extracts and returns a pointer to the value corresponding to
+.I keyword
+in
+.IR parcel .
+If the keyword cannot be found, NULL is returned.
+.LP
+.B bundle
+inserts or replaces the parameter containing
+.I keyword
+and
+.I value
+into 
+.IR parcelp .
+If
+.I value
+is NULL, the parameter corresponding to
+.I keyword
+is deleted. It is not an error to try to delete a non-existent
+parameter. The function returns the value of
+.IR parcelp .
+.LP
+.B bundlep
+is identical to
+.B bundle
+except that the pointers
+.I keyword
+and
+.I value
+are used directly, rather than making copies. This is a useful
+optimization that assumes the arguments are string buffers allocated
+using
+.BR buffers (3l).
+.LP
+.B rebundle
+bundles the contents of
+.I parcel
+into
+.IR parcelp .
+The function returns the the value of
+.IR parcelp .
+Nodes in
+.B parcelp
+which have keywords matching those in
+.BR parcel
+are replaced.
+.LP
+.B enbundle
+is identical to
+.BR rebundle ,
+except that nodes in
+.B parcelp
+which have keywords matching those in
+.BR parcel
+are not replaced. This is useful for augmenting a PARCEL with default
+parameters.
+.LP
+.B countparcel
+returns the number of parameters in
+.IR parcel .
+.LP
+.B freeparcel
+frees all dynamically acquired memory associated with
+.IR parcel .
+.LP
+.B travparcel
+traverses a PARCEL, applying the function
+.I g
+to each node in the PARCEL. The function is passed a pointer to the
+.IR node ,
+and a void pointer
+.I vp
+which it may use to carry state. As long as
+.I g
+returns zero, the traversal continues; otherwise the traveral is
+abandoned and
+.I travparcel
+returns final return code from
+.IR g .
+.LP
+A PARCEL is a data structure containing parameters in a form which can
+be accessed quickly by the application. It is currently implemented as
+a pointer to a structure which roots a binary tree. The parameters are
+stored in the tree in ASCII collating sequence by keyword.
+.SH "RETURN VALUES"
+All functions which return a pointer return NULL when an error is
+detected; errno is set appropriately. All functions which return
+an integer return a negative number when an error is detected; errno
+is set appropriately.
+.LP
+In the instances where a PARCEL is returned, NULL may also mean
+that the PARCEL is empty, in which case errno is set to zero.
+.SH ERRORS
+Virtually the only errors which are returned are the following.
+.TP 20
+.SM EINVAL
+An invalid argument, such as NULL where an address was expected, was
+passed to the function.
+.TP
+.SM ENOMEM
+Memory could not be allocated for the dynamic structures.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR buffers (3l),
+.BR escapes (3l),
+.BR keyval (3l),
+.BR nextparser (3l),
+.BR package (3l),
+.BR packet (3l),
+.BR parmfile (3l),
+.BR pile (3l),
+.BR portfolio (3l),
+.BR trees (3l)
+.SH VERSION
+@(#)parcel.3l	4.14 94/06/28 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

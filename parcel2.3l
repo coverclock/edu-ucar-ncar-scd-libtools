@@ -1,0 +1,215 @@
+.TH PARCEL2 3-local "94/05/16"
+.SH NAME
+fmtparcel, dumparcel, bundlef, unbundlef \- additional parcel functions
+.SH COPYRIGHT
+Copyright \(co 1991, 1992, 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """parcel.h"""
+.LP
+.B int fmtparcel(parcel,format,buffer)
+.B PARCEL parcel;
+.B char *format;
+.B char *buffer;
+.LP
+.B int dumparcel(parcel,fp)
+.B PARCEL parcel;
+.B FILE *fp;
+.LP
+.B char *unbundlef(keyword,parcel,format,argp)
+.B char *keyword;
+.B PARCEL parcel;
+.B char *format;
+.B char *argp;
+.LP
+.B PARCEL bundlef(keyword,parcelp,buffer,format,args)
+.B char *keyword;
+.B PARCEL *parcelp;
+.B char *buffer;
+.B char *format;
+.B va_list args;
+.fi
+.SH DESCRIPTION
+.B fmtparcel
+is the
+.BR printf (3)
+of the parcel world. It takes a
+.B parcel
+and a
+.B format
+string, and formats the contents of the parcel into the
+.BR buffer .
+The format string is of the form
+.sp
+.in +5
+.IR keyword = format
+.IR keyword = format ...
+.in -5
+.sp
+where each
+.I keyword
+identifies a keyword-value pair in the parcel,
+and each 
+.I format
+is a
+.BR sprintf (3)-style
+format string used to format the value portion of the pair. Values of
+keywords which cannot be found in the parcel are treated as a
+zero-length string. The format string is processed from left to right.
+.LP
+For example, if a parcel contained the keyword-value pairs
+.sp
+.nf
+.in +5
+.ft L
+NAME="Foo Bar"
+LOGIN="fbar"
+TERM=xterm
+SHELL="/bin/xsh"
+.ft R
+.in -5
+.fi
+.sp
+then the format string
+.sp
+.nf
+.in +5
+.ft L
+"NAME='User %s has' LOGIN='login %s' SHELL='and shell %s'"
+.ft R
+.in -5
+.fi
+.sp
+would yield a buffer containing
+.sp
+.nf
+.in +5
+.ft L
+User Foo Bar has login fbar and shell /bin/xsh
+.ft R
+.in -5
+.fi
+.LP
+.B dumparcel
+prints a parcel in a format in which a programmer has some prayer of
+determining the original structure of the underlying tree. This debugging
+output is strictly a programmer-friendly and user-hostile.
+.LP
+.B unbundlef
+performs the identical function to the
+.BR parcel (3l)
+function
+.BR unbundle ,
+with the added feature of using
+.BR sscanf (3)
+and a
+.BR printf (3)-style
+format string to automatically convert the value
+of the parameter extracted from the parcel into a different data type.
+For example, a parameter value that consists of ASCII digits may be
+converted into a binary integer. The
+.I keyword
+string identifies the parameter to be extracted.
+.I parcel
+is the parcel from which the parameter is to be extracted.
+.I format
+is a
+.BR printf (3)-style
+format string that controls the conversion in a
+scanf-like manner.
+.I argp
+points to the variable into which scanf is to store the converted value.
+The address of the variable should be cast into a pointer to char.
+.LP
+.B bundlef
+performs the identical function as the
+.BR parcel (3l)
+function
+.BR bundle ,
+with the added feature that a variable length argument list is formatted into
+the value string using
+.BR vsprintf (3)
+and a
+.BR printf (3)-style
+format string. The
+.I keyword
+string identifies the parameter to be inserted.
+.I parcelp
+points to the parcel to be modified.
+.I format
+is a
+.BR printf (3)-style
+format string that controls the formatting in a
+.BR sprintf (3)-like
+manner. The resulting value string placed in
+.IR buffer ,
+which is assumed to be large enough.
+.I args
+is the variable length argument list processed by the format string.
+.SH "RETURN VALUES"
+.B fmtparcel
+and
+.B dumparcel
+each return zero upon normal completion, a negative number otherwise.
+.LP
+.B unbundlef
+and
+.B bundlef
+each returns the same value as their
+.BR parcel (3l)
+counterparts.
+.SH ERRORS
+.B fmtparcel
+and
+.B dumparcel
+may return the following error numbers.
+.TP 20
+.SM EINVAL
+An input argument is bogus.
+.TP
+.SM ENOMEM
+No memory left from which to allocate a buffer.
+.LP
+Error codes for
+.B bundlef
+and
+.B unbundlef
+are identical to those returned by
+.BR bundle (3l)
+and
+.BR unbundle (3l)
+with the exception of one additional error code which may be returned by
+.BR unbundlef (3l).
+.TP 20
+.SM EINVAL
+.BR sscanf (3)
+failed.
+.SH BUGS
+.B fmtparcel
+and
+.B bundlef
+each assumes that
+.B buffer
+is is large enough to contain the resulting string.
+.LP
+There is a
+.BR vsprintf (3l)-imposed
+limit to the size of value string that
+.B bundlef
+and
+.B fmtparcel
+can generate. Since it is imposed by the implementation on the host,
+it may vary from system to system.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR printf (3),
+.BR sprintf (3),
+.BR vsprintf (3),
+.BR parcel (3l)
+.SH VERSION
+@(#)parcel2.3l	4.5 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

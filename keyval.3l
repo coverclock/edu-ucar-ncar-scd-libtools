@@ -1,0 +1,226 @@
+.TH KEYVAL 3-local "94/05/16"
+.SH NAME
+kvget, kvput, kvfree, kvmerge \- maintain a in-core tree of key-value pairs
+.SH COPYRIGHT
+Copyright \(co 1990, 1991, 1992 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """keyval.h"""
+.LP
+.B char *kvget(key,tree)
+.B char *key;
+.B KEYVAL *tree;
+.LP
+.B KEYVAL **kvput(key,val,treep)
+.B char *key;
+.B char *val;
+.B KEYVAL **tree;
+.LP
+.B KEYVAL **kvputp(key,val,treep)
+.B BUFFER key;
+.B BUFFER val;
+.B KEYVAL **tree;
+.LP
+.B int kvmerge(from,top)
+.B KEYVAL *from;
+.B KEYVAL **top;
+.LP
+.B int kvaugment(from,top)
+.B KEYVAL *from;
+.B KEYVAL **top;
+.LP
+.B int kvcount(tree)
+.B KEYVAL *tree;
+.LP
+.B int kvfree(tree)
+.B KEYVAL *tree;
+.LP
+.B int kvdump(tree,fp)
+.B KEYVAL *tree;
+.B FILE *fp;
+.LP
+.B int kvpool(fp)
+.B FILE *fp;
+.LP
+.B void kvshutdown()
+.fi
+.SH DESCRIPTION
+.B kvget
+and its sibling functions use the
+.BR trees (3l)
+package to maintain an in-core tree of pairs of strings. Each
+pair has a key string and an associated value string. The tree can
+be searched by key, key-value pairs can be deleted or added, and
+the value string of a key-value pair can be replaced. The actual
+implementation of the tree is a binary tree ordered alphabetically.
+Each node of the tree has the structure
+.LP
+.nf
+.ft L
+struct keyval
+        {
+        struct treenode kv_tree;
+        char *          kv_keyword;
+        char *          kv_value;
+        };
+.ft P
+.fi
+.LP
+where
+.B kv_tree
+is the subtree branching off this node,
+.B kv_keyword
+points to the key component, and
+.B kv_value
+points to the value component. All the normal operations defined
+in the
+.BR trees (3l)
+package can also be used on key-value trees. There is no explicit
+initialization of a key-value tree. Its root is simply a pointer
+to a TREE structure (as defined in
+.BR trees.h )
+initialized to NULL.
+.LP
+.B kvget
+searches the tree rooted at
+.I tree
+for a node whose key string matches
+.IR key .
+If one is found, the address of the value string is returned. NULL is
+returned otherwise.
+.LP
+.B kvput
+searches the tree rooted at the pointer variable addressed by
+.I treep
+for a node whose key string matches
+.IR key .
+If one is found and
+.I val
+is NULL, the node is deleted from the tree. If one is found and
+.I val
+is not NULL, the node's value string is replaced with
+.IR val .
+If it is not found and 
+.I val
+is not NULL, a new node is created containing
+.I key
+and
+.IR val .
+It is not an error to try to delete a non-existent node.
+If a node is added or replaced, storage for the new node (including for the
+contents of the
+.I key
+and
+.I val
+strings) is dynamically allocated.
+If a node is replaced or deleted, the memory occupied by the old node is
+freed.
+.LP
+.B kvputp
+works identically to
+.B kvput
+except that the arguments
+.I key
+and
+.I val
+are assumed to already be dynamically allocated. The
+.I key
+and
+.I val
+pointers are directly embedded in the node. This is a useful
+optimization when used with other functions which use the
+.B buffers
+buffer functions.
+.LP
+.B kvmerge
+merges the contents of one tree into another.
+.I from
+points to the source tree, and
+.I treep
+is the address of the pointer variable that is the root of the
+destination tree. Nodes in the source tree are added to the destination
+tree or replace nodes in the destination tree if the keys match.
+.LP
+.B kvaugment
+is identical to
+.BR kvmerge ,
+except only those nodes whose keys do not appear in the destination
+are added. This is useful when augmenting a tree with default nodes.
+.LP
+.B kvcount
+returns the number of nodes contained in
+.IR tree .
+.LP
+.B kvfree
+frees all memory associated with the tree rooted at
+.IR tree .
+The tree is traversed in a depth-first order and memory occupied by
+each node is freed as it is visited.
+.LP
+.B kvdump
+prints the contents of the tree rooted at
+.I tree
+on
+.IR fp .
+The tree is traversed in-order (which is to say in alphabetical order).
+This function is mainly used for debugging.
+.LP
+.B kvpool
+prints information about how dynamically allocated
+memory is being used on
+.IR fp .
+It is useful for debugging, and is used mostly for
+looking for memory leaks in libtools.
+It returns the total number of bytes used.
+.LP
+.B kvshutdown
+explicitly releases all dynamically acquired storage associated with this
+module that is not visible to the application.
+This call is seldom used in any normal application. However it
+may be useful in memory critical applications. Any of the functions in
+this module can be called after this function is invoked. Efficiency
+will be slightly degraded as memory is dynamically reacquired.
+.SH "RETURN VALUES"
+.B kvget
+and
+.B kvput
+returns the value of
+.IR treep ,
+or NULL if an error has occurred.
+.LP
+.B kvmerge
+returns a 0 if the merge is successful, and a negative number with errno
+set appropriately otherwise. The state of the destination tree should
+the merge fail is indeterminate.
+.LP
+.SH BUGS
+.B kvput
+allocates memory to contain the
+.I key
+and
+.I val
+strings. The strings are assumed to be null terminated.
+.LP
+The pointer returned by
+.B kvget
+is the address of the actual value string in the tree. Altering the
+contents of the string will alter the node.
+.SH ERRORS
+.TP 20
+.SM EINVAL
+An invalid argument was received; for example, NULL for
+.IR key .
+.TP
+.SM ENOMEM
+Memory for a new node could not be allocated.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR buffers (3l)
+.BR trees (3l)
+.SH VERSION
+@(#)keyval.3l	4.13 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

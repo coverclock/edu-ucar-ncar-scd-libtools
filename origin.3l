@@ -1,0 +1,109 @@
+.TH ORIGIN 3-local "94/05/16"
+.SH NAME
+origin, offset \- pointer manipulation for structures (may be non-portable)
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """offset.h"""
+.sp
+.B #define OFFSET(type,field)
+.sp
+.B #include """origin.h"""
+.sp
+.B #define ORIGIN(pointer,type,field)
+.fi
+.SH DESCRIPTION
+.B OFFSET
+is a macro which computes the byte offset of a field
+.B field
+inside a structure of type
+.BR type .
+If available (and ANSI_LIBTOOLS is defined), it tries to use the
+ANSI C standard operator
+.BR offsetof .
+Otherwise it punts.
+.LP
+.B ORIGIN
+is a macro which computes the address of the beginning of a structure
+of type
+.B type
+given a pointer
+.B pointer
+to a field
+.B field
+inside the structure. It uses the
+.B OFFSET
+macro described above.
+ORIGIN is useful when a structure is a member of multiple
+linked lists, and the lists point to link fields inside the structure.
+.LP
+For example, given
+.sp
+.nf
+.in +5
+.ft L
+struct message
+	{
+	struct message 	*m1;
+	struct message	*m2;
+	struct message	*m3;
+	} *m;
+.ft R
+.in -5
+.fi
+.sp
+then
+.sp
+.nf
+.in +5
+.ft L
+OFFSET(struct message,m2)
+.ft R
+.in -5
+.fi
+.sp
+returns the value
+.sp
+.nf
+.in +5
+.ft L
+4
+.ft R
+.in -5
+.fi
+.sp
+on some systems, depending on sizeof(struct message *), and
+.sp
+.nf
+.in +5
+.ft L
+ORIGIN(&(m->m2),struct message,m2)
+.ft R
+.in -5
+.fi
+.sp
+returns the value
+.sp
+.nf
+.in +5
+.ft L
+m.
+.ft R
+.in -5
+.fi
+.sp
+.SH BUGS
+Despite the attempted use of the ANSI C-compliant
+.B offsetof
+operator, any code which does pointer arithmetic has to be
+of questionable portability, not to mention bogosity.
+Caveat Emptor.
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)origin.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

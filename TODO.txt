@@ -1,0 +1,100 @@
+@(#)ToDo	4.1 94/05/16 jsloan@ncar.ucar.edu
+
+CACHE **********
+
+union cachelink
+	{
+	QUEUENODE	cl_lru;
+	LISTNODE	cl_free;
+	};
+
+typedef union cachelink CACHELINK;
+
+struct cachenode
+	{
+	CACHELINK	cn_links;
+	time_t		cn_timestamp;
+	void *		cn_buffer;
+	};
+
+typedef struct cachenode CACHENODE;
+
+struct cache
+	{
+	void *		ca_buffer;
+	int		ca_size;
+	int		ca_count;
+	int		ca_keydisp;
+	int		ca_keylen;
+	int		ca_timeout;
+	int		(*ca_hash)(/* CACHE *p, void *key, void *v */);
+	int		(*ca_read)(/* CACHE *p, void *key, void *v */);
+	int		(*ca_write)(/* CACHE *p, void *key, void *v */);
+	QUEUE		ca_lru;
+	LIST		ca_free;
+	};
+
+typedef struct cache CACHE;
+
+typedef void * CACHEENTRY;
+typedef void * CACHEKEY;
+
+CACHE *p;
+CACHENODE *n;
+CACHEKEY key;
+CACHEENTRY buf;
+
+CACHE *cachealloc(size,count,keytype,keydisp,keylen,hashf(),readf(),writef(),timeout)
+	allocates and initializes a cache
+	timeout<0 : cache writes until cacheflush()
+	timeout==0 : write-through upon cachedirty()
+	timeout>0 : cache writes until cacheflush() or timeout
+	keytype indicates int, double, char*, maps to specific hash function
+CACHE *cacherealloc(size,count)
+	reallocates a cache, copies contents, releases prior
+int cachefree(p)
+	frees all cache resources
+
+CACHEENTRY cacheget(p,key)
+	allocates a new cache entry and indexes by key
+CACHEENTRY cachefind(p,key)
+	locates existing cache entry indexed by key
+CACHEENTRY cacheread(p,key)
+	locates cache entry indexed by key, reading if necessary
+
+int cacheinvalid(p,buf)
+	e.g. cacheinvalid(p,cacheold(p,key))
+	deletes a cache entry by marking it as invalid
+int cachedirty(p,buf)
+	e.g. cachedirty(p,cacheold(p,key))
+	marks a cache entry as invalid
+
+int cacheflush(p,buf)
+	flushes specific dirty cache entry
+int cachesync(p)
+	flushes ALL dirty cache entries
+BOOLEAN cacheisdirty(p,buf)
+	TRUE if buf is dirty
+	e.g. cacheisdirty(p,cacheold(p,key))
+
+CACHEENTRY cachenext(p,buf)
+	returns address of NEXT sequential entry in cache, given
+		prior returned value as buf. if buf==NULL, returns
+		FIRST entry. Returns NULL if complete.
+CACHEENTRY cacheoldest(p,buf)
+	same as cachenext() but oldest to newest.
+CACHEENTRY cacheorder(p,buf)
+	same as cachenext() but in key order.
+
+
+SERIALIZE **********
+
+sem_buffers_libt
+sem_keyval_libt
+sem_keyword_libt
+sem_nextparser_libt
+sem_nmalloc_libt
+sem_timeformat_libt
+
+P()
+V()

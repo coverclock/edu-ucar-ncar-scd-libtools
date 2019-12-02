@@ -1,0 +1,215 @@
+.TH PORTFOLIO2 3-local "94/05/16"
+.SH NAME
+fmtportfolio, dumportfolio, stufff, unstufff \- additional portfolio functions
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """portfolio.h"""
+.LP
+.B int fmtportfolio(portfolio,format,buffer)
+.B PORTFOLIO *portfolio;
+.B char *format;
+.B char *buffer;
+.LP
+.B int dumportfolio(portfolio,fp)
+.B PORTFOLIO *portfolio;
+.B FILE *fp;
+.LP
+.B char *unstufff(keyword,portfolio,format,argp)
+.B char *keyword;
+.B PORTFOLIO *portfolio;
+.B char *format;
+.B char *argp;
+.LP
+.B PORTFOLIO stufff(keyword,portfolio,buffer,format,args)
+.B char *keyword;
+.B PORTFOLIO *portfolio;
+.B char *buffer;
+.B char *format;
+.B va_list args;
+.fi
+.SH DESCRIPTION
+.B fmtportfolio
+is the
+.BR printf (3)
+of the portfolio world. It takes a
+.B portfolio
+and a
+.B format
+string, and formats the contents of the portfolio into the
+.BR buffer .
+The format string is of the form
+.sp
+.in +5
+.IR keyword = format
+.IR keyword = format ...
+.in -5
+.sp
+where each
+.I keyword
+identifies a keyword-value pair in the portfolio,
+and each 
+.I format
+is a
+.BR sprintf (3)-style
+format string used to format the value portion of the pair. Values of
+keywords which cannot be found in the portfolio are treated as a
+zero-length string. The format string is processed from left to right.
+.LP
+For example, if a portfolio contained the keyword-value pairs
+.sp
+.nf
+.in +5
+.ft L
+NAME="Foo Bar"
+LOGIN="fbar"
+TERM=xterm
+SHELL="/bin/xsh"
+.ft R
+.in -5
+.fi
+.sp
+then the format string
+.sp
+.nf
+.in +5
+.ft L
+"NAME='User %s has' LOGIN='login %s' SHELL='and shell %s'"
+.ft R
+.in -5
+.fi
+.sp
+would yield a buffer containing
+.sp
+.nf
+.in +5
+.ft L
+User Foo Bar has login fbar and shell /bin/xsh
+.ft R
+.in -5
+.fi
+.LP
+.B dumportfolio
+prints a portfolio in a format in which a programmer has some prayer of
+determining the original structure of the underlying skiplist. This debugging
+output is strictly programmer-friendly and user-hostile.
+.LP
+.B unstufff
+performs the identical function to the
+.BR portfolio (3l)
+function
+.BR unstuff ,
+with the added feature of using
+.BR sscanf (3)
+and a
+.BR printf (3)-style
+format string to automatically convert the value
+of the parameter extracted from the portfolio into a different data type.
+For example, a parameter value that consists of ASCII digits may be
+converted into a binary integer. The
+.I keyword
+string identifies the parameter to be extracted.
+.I portfolio
+is the portfolio from which the parameter is to be extracted.
+.I format
+is a
+.BR printf (3)-style
+format string that controls the conversion in a
+scanf-like manner.
+.I argp
+points to the variable into which scanf is to store the converted value.
+The address of the variable should be cast into a pointer to char.
+.LP
+.B stufff
+performs the identical function as the
+.BR portfolio (3l)
+function
+.BR stuff ,
+with the added feature that a variable length argument list is formatted into
+the value string using
+.BR vsprintf (3)
+and a
+.BR printf (3)-style
+format string. The
+.I keyword
+string identifies the parameter to be inserted.
+.I portfolio
+points to the portfolio to be modified.
+.I format
+is a
+.BR printf (3)-style
+format string that controls the formatting in a
+.BR sprintf (3)-like
+manner. The resulting value string placed in
+.IR buffer ,
+which is assumed to be large enough.
+.I args
+is the variable length argument list processed by the format string.
+.SH "RETURN VALUES"
+.B fmtportfolio
+and
+.B dumportfolio
+each return zero upon normal completion, a negative number otherwise.
+.LP
+.B unstufff
+and
+.B stufff
+each returns the same value as their
+.BR portfolio (3l)
+counterparts.
+.SH ERRORS
+.B fmtportfolio
+and
+.B dumportfolio
+may return the following error numbers.
+.TP 20
+.SM EINVAL
+An input argument is bogus.
+.TP
+.SM ENOMEM
+No memory left from which to allocate a buffer.
+.LP
+Error codes for
+.B stufff
+and
+.B unstufff
+are identical to those returned by
+.BR stuff (3l)
+and
+.BR unstuff (3l)
+with the exception of one additional error code which may be returned by
+.BR unstufff (3l).
+.TP 20
+.SM EINVAL
+.BR sscanf (3)
+failed.
+.SH BUGS
+.B fmtportfolio
+and
+.B stufff
+each assumes that
+.B buffer
+is is large enough to contain the resulting string.
+.LP
+There is a
+.BR vsprintf (3l)-imposed
+limit to the size of value string that
+.B stufff
+and
+.B fmtportfolio
+can generate. Since it is imposed by the implementation on the host,
+it may vary from system to system.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR printf (3),
+.BR sprintf (3),
+.BR vsprintf (3),
+.BR portfolio (3l)
+.SH VERSION
+@(#)portfolio2.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

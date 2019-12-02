@@ -1,0 +1,684 @@
+.TH CACHE 3-local "95/03/15"
+.SH NAME
+cacheread, cachewrite \- generic cache manager
+.SH COPYRIGHT
+Copyright \(co 1994 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """cache.h"""
+.LP
+\fICache Input/Output\fP
+.LP
+.B CACHELINE * cacheread(c,p)
+.B CACHE *c;
+.B CACHEPAYLOAD *p;
+.LP
+.B CACHELINE * cachereadby(c,p)
+.B CACHE *c;
+.B CACHEPAYLOAD *p;
+.LP
+.B CACHELINE * cachefind(c,p)
+.B CACHE *c;
+.B CACHEPAYLOAD *p;
+.LP
+.B CACHELINE * cachewrite(c,p)
+.B CACHE *c;
+.B CACHEPAYLOAD *p;
+.LP
+.B CACHELINE * cachewriteby(c,p)
+.B CACHE *c;
+.B CACHEPAYLOAD *p;
+.LP
+.B CACHELINE * cachewritethru(c,p)
+.B CACHE *c;
+.B CACHEPAYLOAD *p;
+.LP
+\fICache Line Manipulation\fP
+.LP
+.B int cachecomplete(c,l)
+.B CACHE *c;
+.B CACHELINE *l;
+.LP
+.B int cacheinvalidate(c,l)
+.B CACHE *c;
+.B CACHELINE *l;
+.LP
+.B int cachedirty(c,l)
+.B CACHE *c;
+.B CACHELINE *l;
+.LP
+.B int cacheclean(c,l)
+.B CACHE *c;
+.B CACHELINE *l;
+.LP
+.B int cachereadonly(c,l)
+.B CACHE *c;
+.B CACHELINE *l;
+.LP
+.B int cachereadwrite(c,l)
+.B CACHE *c;
+.B CACHELINE *l;
+.LP
+.B int cachebusy(c,l)
+.B CACHE *c;
+.B CACHELINE *l;
+.LP
+\fICache Traversal\fR
+.LP
+.B int cacheapply(c,applicator,vp)
+.B CACHE *c;
+.B int (*applicator)();
+.B void *vp;
+.LP
+.B int (*applicator)(l,vp,s)
+.B void *l;
+.B void *vp;
+.B CACHESTATE *s;
+.LP
+\fICache Management\fP
+.LP
+.B int cacheclear(c)
+.B CACHE *c;
+.LP
+.B int cacheflush(c)
+.B CACHE *c;
+.LP
+.B int  cacheinit(c,cf)
+.B CACHE *c;
+.B CACHECONFIG *cf;
+.LP
+.B void cacheshutdown()
+.LP
+.B int cachedump(c,fp)
+.B CACHE *c;
+.B FILE *fp;
+.LP
+.B int cachepool(fp)
+.B FILE *fp;
+.LP
+\fIMacros\fP
+.LP
+.B #define CacheLineIsBusy(c,l)
+.LP
+.B #define CacheLineIsDirty(c,l)
+.LP
+.B #define CacheLineIsCached(c,l)
+.LP
+.B #define CacheLineIsProtected(c,l)
+.LP
+\fIUser Defined Functions\fP
+.LP
+.B int (*cf_free)(p,s)
+.B CACHEPAYLOAD *p;
+.B CACHESTATE *s;
+.LP
+.B int (*cf_compare)(p1,p2,s)
+.B CACHEPAYLOAD *p1;
+.B CACHEPAYLOAD *p2;
+.B CACHESTATE *s;
+.LP
+.B int (*cf_strategy)(l1,l2,c)
+.B CACHELINE *l1;
+.B CACHELINE *l2;
+.B CACHE *c;
+.LP
+.B int (*cf_count)(p,s)
+.B CACHEPAYLOAD *p;
+.B CACHESTATE *s;
+.LP
+.B int (*cf_dump)(p,fp,s)
+.B CACHEPAYLOAD *p;
+.B FILE *fp;
+.B CACHESTATE *s;
+.LP
+.B int (*cf_write)(p,s)
+.B CACHEPAYLOAD *p;
+.B CACHESTATE *s;
+.LP
+.B CACHEPAYLOAD * (*cf_read)(p,s)
+.B CACHEPAYLOAD *p;
+.B CACHESTATE *s;
+.fi
+.SH DESCRIPTION
+.LP
+\fIIntroduction\fP
+.LP
+This package implements a generic cache manager. The cache manager does
+not care what you are caching, how the physical storage of the cache is
+implemented, or what the backing store really is. It simply manages a
+cache of objects, calling user-defined functions to stage objects from
+the backing store into the cache or to migrate dirty objects from the
+cache into the backing store. Items can be read to or written from the
+cache, or they may bypass the cache (with cache consistency at the
+user's own peril). Writes can be to the cache (dirty updates upon
+demand), or through the cache (synchronous dirty updates).
+.LP
+The objects that are cached can be fixed length or
+variable length, and the cache size can be set to the number of objects
+to be cached or the total length of all objects in the cache. When a
+cache line in the cache is referenced (via a read, find, or write), the
+corresponding cache line is locked in the cache until the user either
+indicates that use is complete or that the cache line is invalid.
+Otherwise, the cache manager could deallocate memory associated with
+the cache line while the application still held a pointer to the cache
+line.
+.LP
+The cache management strategy is by default "segmented least recently
+used" (SLRU), but other strategies can be implemented.
+The SLRU default replacement algorithm implements a two-segment cache,
+where items that are being cached compete for cache
+space with items that have been referenced only once; once the second
+reference occurs, the item competes with like-items in a second segment
+of the cache. Separate LRU queues are maintained for each segment.
+This lessens cache turbulence across the entire set of cached items.
+The cache segment for items referenced once
+is called the "probationary" segment; the segment for items referenced more
+than once is the "protected" segment. The cache operations which may
+promote a cache line from probationary to protected status (that is, they
+constitute a "reference") are
+.BR cacheread ,
+.BR cachefind ,
+and
+.BR cachebusy .
+.LP
+\fIData Structures\fP
+.LP
+Although there are a slew of data structures involved when using the
+cache manager, to implement simple caches only a few (CACHE,
+CACHECONFIG CACHELINE, CACHEPAYLOAD) really need to be used and
+understood. All the user-visible data structures are shown here.
+See the
+.B cache.h
+header file for a definitive description of the structures and
+their relationships.
+.TP 20
+.SM CACHE
+A CACHE is a structure which maintains the state of a single cache,
+including the CACHELINEs which are inside the cache. A CACHE also
+contains CACHESTATS and a CACHECONFIG.
+.TP
+.SM CACHELINE
+A CACHELINE is a structure which is used to represent an item that is,
+was, or could be cached. It contains control information used by the
+cache manager. It also contains a pointer to a CACHEPAYLOAD.
+.TP
+.SM CACHEPAYLOAD
+A CACHEPAYLOAD is a user-defined object handled by using a void
+pointer. The cache manager does not know or care what a CACHEPAYLOAD
+really is. All it cares is that the caller can provide a function which
+can compare two CACHEPAYLOADs and return less-than, equal-to, or
+greater-than. The CACHEPAYLOAD is a "magic cookie" that represents
+the objects being cached to the cache manager.
+.TP
+.SM CACHESTATS
+A CACHESTATS is a structure which contains counters about cache usage
+and performance. It can be used to generate cache statistics. For
+example, it has the information necessary to determine the cache hit
+ratio of a CACHE.
+.TP
+.SM CACHECONFIG
+A CACHECONFIG is a structure which contains all the information a user
+needs to supply the cache manager in order to implement a cache. It has
+pointers to the user-defined functions, some of which can be set to
+NULL and the cache manager will take reasonable defaults. A
+CACHECONFIG also contains a CACHESTATE, a cache size limit, and a cache
+trace file pointer which if set will cause the cache manager to dump a
+verbose stream of trace information into the file.
+.TP
+.SM CACHESTATE
+A CACHESTATE is a user-defined object handled by using a void pointer,
+which contains user-defined state information. The cache manager does
+not care what the CACHESTATE is. If unused, the void pointer can be
+NULL.
+.LP
+\fICache Input/Output\fP
+.LP
+The following functions provide the user interface to reading to and
+writing from the cache and the associated backing store.
+In all cases,
+.I c
+points to a CACHE structure;
+.I p
+points to a CACHEPAYLOAD;
+and
+.I l
+points to a CACHELINE returned by a operation on a cache.
+.TP 20
+.SM cacheread
+Returns a pointer to a CACHELINE structure containing a
+payload which matches payload
+.IR p ,
+reading the payload from the backing store if necessary.
+If there is room in cache
+.IR c ,
+the cache line is cached. If no matching payload can be found, NULL is
+returned.
+If a pointer to a cache line is returned, the line is locked in place in the
+cache until either
+.B cachecomplete
+or
+.B cacheinvalid
+is called.
+.TP
+.SM cachefind
+Returns a pointer to a CACHELINE structure containing a
+payload which matches payload
+.IR p ,
+if the matching payload is already in cache
+.IR c .
+If no matching payload can be found in the cache, NULL is returned.
+If a pointer to a cache line is returned, the line is locked in place in the
+cache until either
+.B cachecomplete
+or
+.B cacheinvalid
+is called.
+.TP
+.SM cachereadby
+Returns a pointer to a CACHELINE structure containing a payload which
+matches the payload
+.IR p ,
+where the returned payload is read
+directly from the backing store, bypassing the cache.
+If this is not possible, NULL is
+returned. Otherwise a pointer to a CACHELINE structure containing the
+payload is returned.
+If a pointer to a cache line is returned, the line is locked in place in the
+cache until either
+.B cachecomplete
+or
+.B cacheinvalid
+is called.
+.TP
+.SM cachewrite
+Returns a pointer to a CACHELINE structure containing
+the payload 
+.I p ,
+and attempts to place the cache line into the cache
+.IR c .
+If this fails, NULL is returned.
+If a pointer to a cache line is returned, the line is locked in place in the
+cache until either
+.B cachecomplete
+or
+.B cacheinvalid
+is called. This call implements a "write-back" cache policy, where
+cache entries are marked as dirty, and flushed to the backing store
+at a later time (see
+.BR cacheflush ).
+.TP
+.SM cachewritethru
+Identical to
+.B cachewrite
+except that the resulting dirty entry is immediately flushed to the
+backing store before the call returns.
+.TP
+.SM cachewriteby
+Returns a pointer to a CACHELINE structure containing the payload
+.IR p ,
+which it tries to write
+directly to the backing store, bypassing the cache.
+If this is not possible, NULL is
+returned. Otherwise a pointer to a CACHELINE structure containing the
+payload is returned. Although the cache line is marked as being locked
+in place, since it is not physically part of the cache it does not
+consume a cache slot. In this case,
+.B cachecomplete
+or
+.B cacheinvalid
+must still be called in order to recover the dynamically acquired storage
+associated with the CACHELINE structure.
+.LP
+\fICache Line Manipulation\fP
+.LP
+.TP 20
+.SM cachecomplete
+Signals to the cache manager that use of the CACHELINE structure
+.I l
+is complete, and the cache line is again eligible to be removed from the
+cache and its memory recovered.
+.TP
+.SM cacheinvalidate
+Signals to the cache manager that the CACHELINE
+structure
+.I l
+is no long valid, and that the cache line should be removed from the
+cache and its memory recovered.
+.TP
+.SM cachedirty
+Marks the CACHELINE structure
+.I l
+as being dirty. The cache line will be written to the backing store the
+next time a cache flush is performed.
+.TP
+.SM cacheclean
+Marks the CACHELINE structure
+.I l
+as being clean (not dirty). This is a necessary prerequisite if you want
+to invalidate a cache line that is dirty (which is otherwise an error).
+.TP
+.SM cachereadonly
+Marks the CACHELINE structure
+.I l
+as being readonly. Any attempt to write (for example, using
+.BR cachewrite )
+or dirty (for example, using
+.BR cachedirty )
+the cache line will return an error. Note that this does not prevent
+the cache line from being aged out of the cache (use
+.B cachebusy
+to prevent this). If the cache line is aged out of the cache, and
+the same payload is re-cached at a later time, the new instantiation in
+the cache will not be marked readonly. 
+.TP
+.SM cachereadwrite
+Marks the CACHELINE structure
+.I l
+as being writable (the reverse of
+.BR cachereadonly ).
+.TP
+.SM cachebusy
+Marks the CACHELINE structure
+.I l
+as being busy. It will be locked in the cache until it is either marked
+complete or invalid.
+.LP
+\fICache Traversal\fR
+.LP
+The following functions allow the caller to apply an operation to all
+entries in the cache.
+.TP 20
+.SM cacheapply
+Applies the user-supplied function
+.I applicator
+to every cache line currently in the cache. As long as
+.I applicator
+returns zero, the cache continues to be traversed. Any other values
+causes traversal to cease, and the non-zero value is returned by
+.BR cacheapply .
+.I vp
+is a void pointer which may be used to maintain state in the
+.I applicator
+function between successive calls.
+.LP
+\fICache Management\fR
+.LP
+The following functions apply operations to the entire cache.
+In all cases,
+.I c
+points to a CACHE structure;
+.I cf
+points to a CACHECONFIG structure;
+and
+.I fp
+is a file pointer.
+.TP 20
+.SM cacheclear
+Clears all cache lines in the cache
+.IR c ,
+causing them to be invalidated.
+.TP
+.SM cacheflush
+Flushes all dirty cache lines in the cache
+.IR c ,
+causing them to be written to the backing store.
+.TP
+.SM cacheinit
+Initializes the CACHE structure pointed to by
+.I c
+using the CONFIGURATION structure pointed to by
+.IR cf .
+The CACHE structure contains a copy of the
+.I cf
+pointer, so that if the CONFIGURATION structure is altered, the changes are
+immediately reflected in the operation of the cache. For example,
+replacing a NULL in the
+.B cf_trace
+field of the CONFIGURATION structure with a file pointer (e.g. stderr)
+immediately enables cache tracing.
+.TP
+.SM cacheshutdown
+Causes all internal memory associated with the cache
+manager to be released. This does not affect any active caches.
+.TP
+.SM cachedump
+Dumps a formatted report regarding the cache
+.I c
+to the file pointed to by
+.IR fp .
+.TP
+.SM cachepool
+Prints a formatted report on the file pointed to by
+.I fp
+regarding some internal statistics about the cache manager.
+.LP
+\fIMacros\fP
+.LP
+These macros interrogate fields inside the CACHE and CACHELINE
+structures. In all macros,
+.I c
+is a pointer to a CACHE structure, and
+.I l
+is a pointer to a CACHELINE structure which was provided by an
+operation on that cache.
+.TP 20
+.SM CacheLineIsBusy(c,l)
+Returns TRUE (1) if the cache line is busy (that is, it has
+been referenced and not yet invalidated or completed).
+.TP
+.SM CacheLineIsDirty(c,l)
+Returns TRUE (1) if the cache line is dirty (that is, it has
+been updated or written and has not yet been flushed out to the backing
+store).
+.TP
+.SM CacheLineIsCached(c,l)
+Returns TRUE (1) if the cache line is in the cache (versus
+having been removed from the cache since being returned, or perhaps
+being the result of a
+.BR cachereadby ).
+.TP
+.SM CacheLineIsProtected(c,l)
+Returns TRUE (1) if the cache line is is protected (that is, it has
+been referenced more than once).
+These functions provide for cache initialization and ancillary operations
+such as debugging.
+.LP
+\fIUser-Defined Fields in CACHECONFIG Structure\fP
+.LP
+Pointers to the following user-defined functions are supplied by the
+caller in the CACHECONFIG structure. They implement the interface to
+the CACHEPAYLOAD structure and the backing store. In all calls,
+.I s
+is the value of the CACHESTATE field in the user-supplied CACHECONFIG
+structure, and
+.I c
+is a pointer to a CACHE structure.
+.TP 20
+.SM (*cf_compare)
+Logically subtracts two cache payloads from one another.
+It returns a negative number if payload
+.I p1
+is less than payload
+.IR p2 ,
+zero if payload
+.I p1
+is equal to payload
+.IR p2 ,
+and a positive number if payload
+.I p1
+is greater than payload
+.IR p2 .
+What this comparison actually means in the context of the user-defined
+cache payload is completely up to the implementation of the
+user-supplied function. If no function is provided by the user (the
+.B cf_compare
+field in the CACHECONFIG structure is equal to NULL), the cache manager
+assumes that all payloads are equal (it is unlikely that this is what
+you want).
+.TP
+.SM (*cf_count)
+Returns the length of the payload
+.IR p .
+This length is in the same units as the
+.B cf_limit
+fields in the CACHECONFIG structure. The cache manager uses this length
+to determine if there is enough space in the cache for the payload.
+If no function is provided by the user (the
+.B cf_count
+field in the CACHECONFIG structure is equal to NULL), the cache manager
+assumes that all payloads are of length one (1).
+.TP
+.SM (*cf_read)
+Reads from the backing store a payload which matches the
+supplied payload
+.IR p .
+What is meant exactly by "match" depends on the implementation of the
+payload and the user-supplied function. The function returns a pointer
+to the payload, or NULL if no matching payload is available.
+If no function is provided by the user (the
+.B cf_read
+field in the CACHECONFIG structure is equal to NULL), the cache manager
+does not automatically stage payloads from the backing store to the
+cache, nor does
+.B cachereadby
+work.
+.TP
+.SM (*cf_write)
+Writes the payload
+.I p
+to the backing store. The function returns zero on success, a negative
+value otherwise.
+If no function is provided by the user (the
+.B cf_write
+field in the CACHECONFIG structure is equal to NULL), the cache manager
+does not automatically migrate payloads in dirty cache lines from the
+cache to the backing store, nor does
+.B cachewriteby
+work.
+.TP
+.SM (*cf_free)
+Frees the memory associated with the payload
+.IR p .
+If no function is provided by the user (the
+.B cf_free
+field in the CACHECONFIG structure is equal to NULL), the cache manager
+dereferences the payload associated with a cache line without any memory
+management.
+.TP
+.SM (*cf_strategy)
+Allows cache strategies other than SLRU to be implemented.
+It returns TRUE (1) if it is okay if cache line
+.I l1
+replaces cache line
+.I l2
+in the cache. Cached lines are nominated for replacement in LRU order.
+\fI(Warning: this has never been tested.)\fP
+If no function is provided by the user (the
+.B cf_strategy
+field in the CACHECONFIG structure is equal to NULL), the cache manager
+defaults to the default SLRU algorithm.
+.TP
+.SM (*cf_dump)
+Dumps the cache payload
+.I p
+onto the file pointed to by
+.IR fp .
+It is called by the
+.B cachedump
+function.
+If no function is provided by the user (the
+.B cf_dump
+field in the CACHECONFIG structure is equal to NULL),
+.B cachedump
+still dumps the CACHELINE data structures.
+.TP
+.SM cf_trace
+Setting this file pointer field to any value other than NULL (e.g.
+stderr) will immediately cause the cache manager to start dumping a
+real-time cache trace to the indicated file. (This capability must be
+compiled into the cache manager through the definition of the
+.B CACHE_TRACE
+symbol at the time of its installation).
+.TP
+.SM cf_limit
+An array of length two (2), the first (zero-th) word of which sets an
+upper limit on the number of items that can be cached in the
+probationary cache segment, and the second (one-th) word sets an upper
+limit on the number of items that can be cached in the protected cache
+segment. The sum of both words sets the upper limit on the total number
+of items that can be cached.
+Values are in the same units as are returned by the user-supplied function
+.BR (*cf_count) .
+For example, if ten objects are to be
+cached, then
+.B cf_limit[0]
+could be set to three,
+.B cf_limit[1]
+could be set to seven, and
+.B (*cf_count)
+could always return one. If the cache is never to exceed 1024 bytes, then
+.B cf_limit[0]
+could be set to 256,
+.B cf_limit[1]
+could be set to 768, and
+.B (*cf_count)
+could return the size in bytes of the payload.
+.TP
+.SM cf_state
+Is passed as a void pointer to the user-supplied
+functions in the CACHECONFIG structure when they are called.
+It may be used to carry state between successive invocations
+of the user-supplied code. The cache manager does not make any other
+use of this field.
+.LP
+\fIDiagrams\fP
+.LP
+.nf
+.ft L
+User]<--CACHELINE---cachereadby()<-------------CACHEPAYLOAD---(*cf_read)()<---[Store
+User]<--CACHELINE---cacheread()<-----[CACHE]<--CACHEPAYLOAD---(*cf_read)()<---[Store
+User]---CACHELINE-->cachewrite()---->[CACHE]
+User]---CACHELINE-->cachewritethru()>[CACHE]---CACHEPAYLOAD-->(*cf_write)()-->[Store
+User]---CACHELINE-->cachewriteby()-------------CACHEPAYLOAD-->(*cf_write)()-->[Store
+.ft P
+.sp
+.ce
+\fIData Flow through Functions\fR
+.fi
+.sp 2
+.nf
+.ft L
+CACHE(CACHESTATS)
+\ |\ |
+\ |\ +--->CACHECONFIG-->CACHESTATE
+\ |
+\ +----->CACHELINE---->CACHEPAYLOAD
+\ :
+\ +----->CACHELINE---->CACHEPAYLOAD
+.ft P
+.sp
+.ce
+\fIData Structure Relationships\fP
+.fi
+.SH "RETURN VALUES"
+Functions which return an integer return a negative value upon failure,
+a zero otherwise. Function which return a pointer return a zero pointer
+(NULL) upon failure.
+.SH BUGS
+This module has been applied against its own regression
+test, and used extensively in the MSSCSIM cache simulator
+(that is, it is used as a cache management tool to manage an
+actual cache inside an application that simulates a cache, if
+that makes any sense).
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+R. Karedla et al., "Caching Strategies to Improve Disk
+System Performance", \fIIEEE COMPUTER\fR, Vol. 27, No. 3,
+March 1994 [SLRU]
+.SH VERSION
+@(#)cache.3l	4.4 95/03/15 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

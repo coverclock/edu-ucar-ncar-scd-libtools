@@ -1,0 +1,220 @@
+.TH QUEUES 3-local "94/05/16"
+.SH NAME
+qinit, qinsert, qdelete \- queue handling routines
+.SH COPYRIGHT
+Copyright \(co 1990, 1991, 1992 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """queues.h"""
+.LP
+.B struct queue *qinit(q)
+.B struct queue *q;
+.LP
+.B struct queuenode *qhead(q)
+.B struct queue *q;
+.LP
+.B struct queuenode *qtail(q);
+.B struct queue *q;
+.LP
+.B struct queuenode *qnext(b)
+.B struct queuenode *b;
+.LP
+.B struct queuenode *qprev(b)
+.B struct queuenode *b;
+.LP
+.B struct queuenode *qinsert(q,a,b)
+.B struct queue *q;
+.B struct queuenode *a;
+.B struct queuenode *b;
+.LP
+.B struct queuenode *qdelete(q,b)
+.B struct queue *q;
+.B struct queuenode *b;
+.LP
+.B int qsize(q)
+.B struct queue *q;
+.LP
+.B int qorder(q,fc)
+.B struct queue *q;
+.B int (*fc)(/* struct queuenode **a, struct queuenode **b */);
+.LP
+.B char *qbody(b)
+.B struct queuenode *b;
+.fi
+.SH DESCRIPTION
+.B queues
+implements a set of functions that manage a doubly linked list data
+structure. Nodes can be inserted into and deleted from arbitrary positions
+in the queue. Both stacks (LIFO) and lists (FIFO) can be implemented
+using queues. A queue can be reordered according to a user-specified
+ordering function. Any user-defined data structure to be inserted onto
+a queue must have as its first element an instance of
+.B struct queuenode
+(typedef'ed as
+.BR QUEUENODE ).
+The head of a queue is declared to be an instance of
+.B struct queue
+(typedef'ed as
+.BR QUEUE ).
+For example,
+.nf
+.sp
+.ft L
+struct userstuff
+	{
+	QUEUENODE	us_node;
+	long		us_somelong;
+	char		us_somechar;
+	};
+
+QUEUE userqueue;
+.ft P
+.sp
+.fi
+.LP
+.B qinit
+initializes queue header
+.IR q .
+.LP
+.B qhead
+returns a pointer to the first node on queue
+.IR q ,
+or NULL if the queue is empty.
+.B qtail
+returns a pointer to the last node on queue
+.IR q ,
+or NULL if the queue is empty.
+.LP
+.B qnext
+returns a pointer to the node following node
+.IR b ,
+or NULL if
+.I b
+is the last node on the queue.
+.B qprev
+returns a pointer to the node prior to node
+.IR b ,
+or NULL if
+.I b
+is the first node on the queue.
+.LP
+.B qinsert
+inserts node
+.I b
+after node
+.I a
+on queue
+.IR q .
+If
+.I a
+is NULL, node
+.I b
+is inserted at the head of the queue.
+The address of
+.I b
+is returned.
+.LP
+.B qdelete
+deletes node
+.I b
+from queue
+.IR q .
+The address of
+.I b
+is returned.
+.LP
+.B qsize
+returns the count of nodes on queue
+.IR q .
+.LP
+.B qorder
+reorders all items on queue
+.IR q ,
+according to the ordering function pointed to by
+.IR fc .
+.I fc
+will be called with two arguments,
+.I a
+and
+.IR b ,
+each a pointer to a pointer to a node. The function should return
+-1 if
+.I a
+is less than
+.IR b ,
+0 if
+.I a
+equals
+.IR b ,
+and 1 if
+.I a
+is greater than
+.IR b .
+The exact meaning of the comparison is up to the caller-supplied function.
+.LP
+.B qbody
+returns the address of the user structure following the leading
+.B QUEUENODE
+structure.
+.LP
+For example, given
+.nf
+.sp
+.ft L
+QUEUE q;
+QUEUENODE *b;
+.ft P
+.sp
+.fi
+a FIFO put(q,b) operator can be written as
+.nf
+.sp
+.ft L
+(void)qinsert(&q,qtail(&q),b);
+.ft P
+.sp
+.fi
+A FIFO b=get(q) operator can be written as
+.nf
+.sp
+.ft L
+b=qhead(&q)!=NULL?qdelete(&q,qhead(&q)):NULL;
+.ft P
+.sp
+.fi
+A LIFO push operator can be written as
+.nf
+.sp
+.ft L
+(void)qinsert(&q,NULL,b);
+.ft P
+.sp
+.fi
+A LIFO pop operator can be written as
+.nf
+.sp
+.ft L
+b=qhead(&q)!=NULL?qdelete(&q,qhead(&q)):NULL;
+.ft P
+.sp
+.fi
+.SH "RETURN VALUES"
+If an argument is invalid, functions returning a pointer will return
+NULL. An error can be distinquished from a queue-empty indication by
+examining the UNIX system error variable errno for a non-zero value.
+.SH BUGS
+Since the
+.B qbody
+function knows nothing about the alignment of the
+user structure, its return pointer is computed rather naively.
+.SH "SEE ALSO"
+.BR lists (3l),
+.BR stacks (3l)
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)queues.3l	4.3 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

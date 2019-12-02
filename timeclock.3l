@@ -1,0 +1,207 @@
+.TH TIMECLOCK 3-local "96/06/19"
+.SH NAME
+timeclock, timeformat, timeelapsed, cpuseconds \- system dependent functions
+.SH COPYRIGHT
+Copyright \(co 1993-1996 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """timeclock.h"""
+.LP
+.B TIMESTAMP timeclock()
+.LP
+.B HIGHTIMESTAMP *hightimeclock(hightime)
+.B HIGHTIMESTAMP *hightime;
+.LP
+.B char *timeformat(buffer,bufsize,format,seconds,utc)
+.B char *buffer;
+.B int bufsize;
+.B char *format;
+.B long seconds;
+.B int utc;
+.LP
+.B char *timeelapsed(buffer,seconds)
+.B char *buffer;
+.B TIMESTAMP seconds;
+.LP
+.B double cpuuseconds(TIMESTAMP vector[4])
+.LP
+.B TIMESTAMP cpuseconds()
+.LP
+.B MEMORYBREAK memorybreak()
+.LP
+.B int mustswap()
+.LP
+.B #include """windowsize.h"""
+.LP
+.B void windowsize(linesp,columns)
+.B int *linesp;
+.B int *columnsp;
+.fi
+.SH DESCRIPTION
+.B timeclock
+returns the number of seconds elapsed since 00:00
+January 1, 1970 (the zero-hour used by the UNIX system clock) in a long word.
+.B timeclock
+returns ((TIMESTAMP)(-1)) upon error; note that this may be an unsigned
+value, so merely checking for a return less than zero is not adequate.
+.LP
+.B hightimeclock
+returns a pointer to a structure which contains two long word fields, the
+first (t_sec) is the time in seconds as in
+.BR timeclock ,
+and the second (t_nsec) is the
+fractional second in nanoseconds. The actual resolution of the second
+long word depends on the available timer resolution of the host system.
+For strictly POSIX.1 compliant systems, this word may be all zeros.  If
+.I hightime
+is NULL, an internal static structure is used; otherwise the
+caller-supplied structure is used and its address is returned.
+.B hightimeclock
+returns NULL upon error.
+.LP
+.B timeformat
+uses the
+.B strftime
+libc function to format the time in
+.IR seconds ,
+as returned by
+.BR timeclock ,
+into a
+.I buffer
+of length
+.I bufsize
+using a printf-style
+.I format
+string.
+If
+.I utc
+is non-zero, the time is represented in Universal Co-ordinated Time
+(formerly Greenwich Mean Time); otherwise the time is local time.
+The
+.B timeclock.h
+header file contains a slew of macros that use
+.B timeformat
+and
+.B timeclock
+to generate timestamps in a number of popular colors and styles. There
+is usually little reason to call the somewhat arcane
+.B timeformat
+directly. The available formats include
+.LP
+.nf
+.in +5
+.TS
+l l.
+date	(e.g. "Fri Nov  6 11:03:58 MST 1992")
+ymdhms	(e.g. "92/11/06 11:03:58")
+hmsymd	(e.g. "11:03:58 92/11/06")
+mdyhms	(e.g. "11/06/92 11:03:58")
+hms	(e.g. "110358")
+yj	(e.g. "92311")
+ymd	(e.g. "19921106")
+.TE
+.in -5
+.fi
+.LP
+.B timeelapsed
+formats the value of
+.I seconds
+into
+.I buffer
+in the form "HHHH:MM:SS". This is useful for displaying elapsed times.
+.LP
+.B cpuuseconds
+returns a double precision floating point value containing the number of
+CPU microseconds expended so far by the calling process. If the array
+.I vector
+is non-NULL, it is filled in with four TIMESTAMP integers: the number
+of user CPU seconds, the number of user CPU microseconds, the number of
+system CPU seconds, and the number of system CPU microseconds. The
+precision of the results depends on the time service provided by the
+underlying operating system.
+.B cpuuseconds
+can be conditionally compiled to use (in order of preference)
+.BR getrusage (2)
+(POSIX),
+.BR times (2)
+(SVR4),
+.BR clock (3)
+(commonly implemented),
+or
+.I nothing
+(in which case it returns zeros for all values).
+.LP
+.B cpuseconds
+returns a TIMESTAMP integer containing the number of CPU seconds expended so
+far by the calling process. It is just a wrapper around
+.BR cpuuseconds .
+It is provided for compatibility with older releases this module.
+.LP
+.B windowsize
+returns the number of lines and columns for the device defined as
+standard output. The values are returned in the value-result parameters
+.I linesp
+and
+.IR columnsp .
+If the number of lines or columns cannot be determined, the parameter is
+set to zero.
+Depending on the compile time flags defined when the function is installed,
+.B windowsize
+uses (in this order) the environmental variables LINES and COLUMNS, the
+.BR ioctl (2)
+call TIOCGWINSZ, the terminal capabilities database
+.IR termcap ,
+the terminal capabilities database
+.IR terminfo ,
+and finally the function
+.BR termdef (3).
+.LP
+.B memorybreak
+is a wrapper around the non-portable non-POSIX, but widely implemented,
+.BR sbrk (2)
+system call. It returns a long word indicating the highest memory
+address used by the caller. Subtracting the values returned from
+successive calls to
+.B memorybreak
+will, if the caller is extremely lucky, tell something about net memory
+growth.
+.LP
+.B mustswap
+returns TRUE (1) if the host byte order differs from network byte order,
+FALSE (0) otherwise.
+.SH BUGS
+Not all systems implement all the macros used by
+.BR timeformat .
+If your output ends up with unexpected percent signs instead of
+a time value, then your system's implementation of
+.B strftime
+is not as nice as some others. This seems particularly true of the
+.B date
+format.
+.LP
+Most system timers do not really achieve
+microsecond precision (although some claim nanosecond), so the elapsed
+microseconds values returned by
+.B cpuuseconds
+is only approximate.
+.LP
+The
+.BR memorybreak
+and
+.B mustswap
+functions obviously have precious little to do with the time, but the
+functions that were likely to be very system or architecture dependent
+(and therefore problematic for porting) were centralized into one
+module. In the meantime,
+.BR windowsize
+was moved into its own module to prevent having to link in the terminfo
+and/or termcap libraries with time-related applications; it should
+probably have its own manual page as well.
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)timeclock.3l	4.2 96/06/19 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

@@ -1,0 +1,58 @@
+.TH GETPATH 3-local "94/05/16"
+.SH NAME
+getpath \- create a path in a printf-style of way
+.SH COPYRIGHT
+Copyright \(co 1992 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """getpath.h"""
+.LP
+.B char *getpath(path,root,format[,arg]\|.\|.\|.)
+.B char *path;
+.B char *root;
+.B char *format;
+.fi
+.SH DESCRIPTION
+.B getpath
+can be used to generate a path name into the buffer
+.IR path .
+It formats a variable length argument list using a printf-style
+.I format
+string. If the generated path is relative (does not begin
+with a slash or a period), and if
+.I root
+is not NULL, then
+.I root
+is prepended to the path.
+.LP
+.B getpath
+is especially useful for creating path-generating macros in a
+header file that creates path names in a consistent fashion across an
+entire application. An example is shown below.
+.sp
+.nf
+.ft L
+extern char *getenv();
+
+#define ROOT	(getenv("ROOTDIR")==NULL?"/default":getenv("ROOTDIR"))
+
+#define PathBinary(path,pgm)	getpath(path,ROOT,"bin/%s",pgm)
+#define PathLibrary(path,lib)	getpath(path,ROOT,"lib/lib%s.a",lib)
+#define PathTempfile(path,num)	getpath(path,ROOT,"tmp/C%04d",num)
+.ft P
+.fi
+.SH "RETURN VALUES"
+.B getpath
+return the value of
+.IR path .
+.SH BUGS
+.I path
+is assumed to be large enough.
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)getpath.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

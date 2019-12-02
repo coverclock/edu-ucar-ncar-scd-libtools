@@ -1,0 +1,104 @@
+.TH STACKS 3-local "94/05/16"
+.SH NAME
+sget, spop, spush, sbody \- manage LIFO linked lists
+.SH COPYRIGHT
+Copyright \(co 1990, 1991, 1992 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """stacks.h"""
+.LP
+.B struct stacknode *sget(s)
+.B struct stacknode **s;
+.LP
+.B struct stacknode *spop(s)
+.B struct stacknode **s;
+.LP
+.B struct stacknode *spush(s,n)
+.B struct stacknode **s;
+.B struct stacknode *n;
+.LP
+.B char *sbody(n)
+.B struct stacknode *n;
+.fi
+.SH DESCRIPTION
+The functions in the
+.B stacks
+package implement general LIFO linked list handling operations.
+A stack consists of a head to which nodes are added to the front and
+removed from the front.
+The head of the stack is a pointer to a
+.B stacknode
+structure which is initialized to NULL.
+A node on the stack is a
+.B stacknode
+structure.
+Nodes and heads have the general form
+.LP
+.nf
+.ft L
+struct stacknode
+        {
+        struct stacknode * s_next;
+        };
+.sp
+typedef stacknode * stackhead;
+.ft P
+.fi
+.LP
+where
+.B s_next
+points to the next item on the stack.
+All nodes must begin with the
+.B stacknode
+structure or its equivalent, but other than that their composition
+is irrelevant. The address of the body of a node
+.I n
+(that is, the address just past the leading
+.B stacknode
+structure) is calculated and returned by the function
+.BR sbody .
+.LP
+.B sget
+returns a pointer to the top item on the stack
+.I s
+without removing it. If the stack is empty, NULL is returned.
+.LP
+.B spop
+returns a pointer to the top item on the stack
+.I s
+and removes it from the stack. If the stack is empty, NULL is returned.
+.LP
+.B spush
+pushes the node
+.I n
+onto the top of the stack.
+.SH "RETURN VALUES"
+.B sbody
+returns the address of the body of the node. If an error occurs, NULL
+is returned and errno is set appropriately.
+.LP
+.B spush
+returns the address of the node placed on the top of the stack.
+If an error occurs, NULL is returned and errno is set appropriately.
+.LP
+.B sget
+and
+.B spop
+return the address of the node on top
+of the stack. If the stack was empty, NULL is returned and errno is set
+to zero. If an error occurs, NULL is returned and errno is set
+appropriately.
+.SH BUGS
+.B sbody
+naively assumes that the body of the node immediately follows the
+.B stacknode
+structure. The actual address may depend upon the alignment of the
+composite structures of the underlying body.
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)stacks.3l	4.3 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

@@ -1,0 +1,225 @@
+.TH SKEYVAL 3-local "94/05/16"
+.SH NAME
+skvget, skvput, skvfree, skvmerge \- maintain a in-core skiplist of key-value pairs
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """skeyval.h"""
+.LP
+.B SKEYVALS *skvinit(list)
+.B SKEYVALS *list;
+.LP
+.B char *skvget(key,list)
+.B char *key;
+.B SKEYVALS *list;
+.LP
+.B SKEYVALS *skvput(key,val,list)
+.B char *key;
+.B char *val;
+.B SKEYVALS *list;
+.LP
+.B SKEYVALS *skvputp(key,val,list)
+.B BUFFER key;
+.B BUFFER val;
+.B SKEYVALS *list;
+.LP
+.B int skvmerge(from,to)
+.B SKEYVALS *from;
+.B SKEYVALS *to;
+.LP
+.B int skvaugment(from,to)
+.B SKEYVALS *from;
+.B SKEYVALS *to;
+.LP
+.B int skvcount(list)
+.B SKEYVALS *list;
+.LP
+.B int skvfree(list)
+.B SKEYVALS *list;
+.LP
+.B int skvdump(list,fp)
+.B SKEYVALS *list;
+.B FILE *fp;
+.LP
+.B int skvpool(fp)
+.B FILE *fp;
+.LP
+.B void skvshutdown()
+.fi
+.SH DESCRIPTION
+.B skvget
+and its sibling functions use the
+.BR skiplists (3l)
+package to maintain an in-core skiplist of pairs of strings. Each
+pair has a key string and an associated value string. skiplist tree can
+be searched by key, key-value pairs can be deleted or added, and
+the value string of a key-value pair can be replaced.
+Each node of the skiplist has the structure
+.LP
+.nf
+.ft L
+struct skeyval
+        {
+        struct skeyval*	kv_snext;
+        char *          kv_skeyword;
+        char *          kv_svalue;
+        };
+.ft P
+.fi
+.LP
+where
+.B skv_next
+is used for memory management of unused skeyval structures (and can
+be used by the application for any purpose),
+.B skv_keyword
+points to the key component, and
+.B skv_value
+points to the value component. All the normal operations defined
+in the
+.BR skiplists (3l)
+package can also be used on key-value skiplists. Key-value skiplists must
+be initialized using
+.BR skvinit .
+.LP
+.B skvget
+searches the skiplist
+.I list
+for a node whose key string matches
+.IR key .
+If one is found, the address of the value string is returned. NULL is
+returned otherwise.
+.LP
+.B skvput
+searches the skiplist
+.I list
+for a node whose key string matches
+.IR key .
+If one is found and
+.I val
+is NULL, the node is deleted from the skiplist. If one is found and
+.I val
+is not NULL, the node's value string is replaced with
+.IR val .
+If it is not found and 
+.I val
+is not NULL, a new node is created containing
+.I key
+and
+.IR val .
+It is not an error to try to delete a non-existent node.
+If a node is added or replaced, storage for the new node (including for the
+contents of the
+.I key
+and
+.I val
+strings) is dynamically allocated.
+If a node is replaced or deleted, the memory occupied by the old node is
+freed.
+.LP
+.B skvputp
+works identically to
+.B skvput
+except that the arguments
+.I key
+and
+.I val
+are assumed to already be dynamically allocated. The
+.I key
+and
+.I val
+pointers are directly embedded in the node. This is a useful
+optimization when used with other functions which use the
+.B buffers
+buffer functions.
+.LP
+.B skvmerge
+merges the contents of one skiplist into another.
+.I from
+points to the source skiplist, and
+.I to
+points to the destination skiplist.
+Nodes in the source skiplist are added to the destination
+skiplist or replace nodes in the destination skiplist if the keys match.
+.LP
+.B skvaugment
+is identical to
+.BR skvmerge ,
+except only those nodes whose keys do not appear in the destination
+are added. This is useful when augmenting a skiplist with default nodes.
+.LP
+.B skvcount
+returns the number of nodes contained in
+.IR list .
+.LP
+.B skvfree
+frees all memory associated with the skiplist
+.IR list .
+.LP
+.B skvdump
+prints the contents of the skiplist
+.I skiplist
+on
+.IR fp .
+The skiplist is traversed in-order (which is to say in alphabetical order).
+This function is mainly used for debugging.
+.LP
+.B skvpool
+prints information about how dynamically allocated
+memory is being used on
+.IR fp .
+It is useful for debugging, and is used mostly for
+looking for memory leaks in libtools.
+It returns the number of bytes currently in use.
+.LP
+.B skvshutdown
+explicitly releases all dynamically acquired storage associated with this
+module that is not visible to the application.
+This call is seldom used in any normal application. However it
+may be useful in memory critical applications. Any of the functions in
+this module can be called after this function is invoked. Efficiency
+will be slightly degraded as memory is dynamically reacquired.
+.SH "RETURN VALUES"
+.B skvget
+and
+.B skvput
+returns the value of
+.IR list ,
+or NULL if an error has occurred.
+.LP
+.B skvmerge
+returns a 0 if the merge is successful, and a negative number with errno
+set appropriately otherwise. The state of the destination skiplist should
+the merge fail is indeterminate.
+.LP
+.SH BUGS
+.B skvput
+allocates memory to contain the
+.I key
+and
+.I val
+strings. The strings are assumed to be null terminated.
+.LP
+The pointer returned by
+.B skvget
+is the address of the actual value string in the tree. Altering the
+contents of the string will alter the node.
+.SH ERRORS
+.TP 20
+.SM EINVAL
+An invalid argument was received; for example, NULL for
+.IR key .
+.TP
+.SM ENOMEM
+Memory for a new node could not be allocated.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR buffers (3l),
+.BR skiplists (3l)
+.SH VERSION
+@(#)skeyval.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

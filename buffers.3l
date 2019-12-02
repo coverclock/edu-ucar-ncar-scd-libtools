@@ -1,0 +1,225 @@
+.TH BUFFERS 3-local "94/05/16"
+.SH NAME
+bufalloc, buffree, bufdup, bufrealloc \- dynamic buffer allocation and deallocation
+.SH COPYRIGHT
+Copyright \(co 1990, 1991, 1992 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """buffers.h"""
+.LP
+.B BUFFER bufalloc(l)
+.B int l;
+.LP
+.B int buffree(c)
+.B BUFFER c;
+.LP
+.B BUFFER bufdup(c)
+.B char *c;
+.LP
+.B BUFFER bufrealloc(c,l)
+.B BUFFER c;
+.B int l;
+.LP
+.B BUFFER bufexpand(c,l)
+.B BUFFER c;
+.B int l;
+.LP
+.B BUFFER bufinsure(c,l)
+.B BUFFER c;
+.B int l;
+.LP
+.B int buflength(c)
+.B BUFFER c;
+.LP
+.B int bufpool(fp)
+.B FILE *fp;
+.LP
+.B void bufshutdown()
+.fi
+.SH DESCRIPTION
+One of the problems of using buffers dynamically allocated with
+.B malloc
+is that the heap becomes fragmented, degrading execution time.
+This is especially true of the
+.BR parcels (3l)
+family of data structures which heavily use dynamically allocated strings.
+The
+.B buffers
+package attempts to reduce the overhead of dynamic strings by
+allocating string buffers only in certain fixed lengths, then saving freed
+buffers in pools for later use. For each fixed length provided by
+.B buffers
+there is a pool of buffers, reducing the search time for a
+buffer of suitable length. A buffer is allocated using
+.B malloc
+only if there is no buffer available in the appropriate pool. If the
+requested string length if greater than those in any of the available
+pools, the buffer is allocated and freed using the usual
+.B malloc
+and
+.BR free .
+.LP
+buffers are not preallocated; they are allocated only upon demand.
+Failure by the application to manage the buffers (e.g. free them
+using
+.B buffree
+when they are no longer used) results in a memory leak, just as it would
+when using
+.BR malloc .
+.B buffers
+buffers can be used anywhere where regular C strings can be
+used. The data type
+.B BUFFER
+is in reality simply a
+.BR "char *" .
+A unique data type name is defined to remind the programmer of the
+dynamic nature of the strings. However, the inverse is not true: regular
+C strings may not be used where buffers (of type
+.BR BUFFER )
+are required. This is because
+.B buffers
+maintains meta-data about each buffer that is not available for
+regular strings. For example,
+.B buflength
+returns the actual allocated length of the buffer. Compare this
+with the C function
+.B strlen
+which returns the length of the string that is the contents of the
+buffer.
+.LP
+.B bufalloc
+acquires a buffer of at least length
+.I l
+bytes, returning the address of the buffer.
+.LP
+.B buffree
+returns the buffer pointed to by
+.I c
+to the appropriate pool.
+.LP
+.B bufdup
+acquires a buffer at least as long as the
+.B strlen+1
+of the string
+.I c 
+(which may be a normal C string), copies the contents of
+.I c
+to the string (using
+.BR strcpy ),
+then returns the address
+of the new buffer.
+.LP
+.B bufrealloc
+checks to make sure that buffer
+.I c
+can contain at least
+.I l
+characters.
+If it cannot,
+.B bufrealloc
+allocates a buffer no smaller than
+.IR l ,
+copies the entire contents of
+.I c
+into the new buffer (using
+.BR bcopy ),
+frees
+.IR c ,
+and returns a pointer to the new buffer.
+.LP
+.B bufexpand
+is identical to
+.B bufrealloc
+except that is uses
+.B strcpy
+instead of
+.BR bcopy ,
+so that only the contents of
+.I c
+up to the nul terminator are copied.
+.LP
+.B bufinsure
+does the same thing as
+.BR bufrealloc ,
+except that it does not copy the contents of
+.I c
+into the new buffer. This is useful for when an empty
+buffer is being resized.
+.LP
+.B buflength
+returns the actual allocated size of the buffer
+.IR c ,
+including slack bytes.
+.LP
+.B bufpool
+prints information about the current state of the buffer pools to
+.I fp .
+It is mostly useful for debugging, in particular finding memory leaks.
+It returns the total number of bytes used.
+.LP
+.B bufshutdown
+explicitly releases all dynamically acquired storage associated with this
+module that is not visible to the application.
+This call is seldom used in any normal application. However it
+may be useful in memory critical applications. Any of the functions in
+this module can be called after this function is invoked. Efficiency
+will be slightly degraded as memory is dynamically reacquired.
+.SH "RETURN VALUES"
+.BR bufalloc ,
+.BR bufdup ,
+.B bufinsure
+and
+.B bufrealloc
+return NULL if the requested length could not be satisfied. This
+almost always implies a
+.B malloc
+failure.
+.LP
+.B buffree
+returns a negative integer (not necessarily a -1) if the buffer
+could not be freed. This almost always implies a
+.B free
+failure on a buffer larger than that in any of the pools.
+.SH BUGS
+The meta-data for each buffer is stored in the heap space along with
+the buffers themselves. As with
+.BR malloc ,
+if this meta-data is overwritten, the results are
+unpredictable and usually entertaining.
+.LP
+Using a buffer after it has been deallocated by
+.B buffree
+will yield entertaining results when that string is reused on
+a later call of
+.B bufalloc
+or
+.BR bufdup .
+This is the same as using storage which has been deallocated
+by
+.BR free .
+.LP
+There is inevitably some memory overhead in
+.BR buffers .
+The total amount of space allocated to a buffer is almost always
+greater than that actually in use, since each buffer will have
+zero or more unused slack bytes. Since buffers are never
+actually released back to the heap, the heap never shrinks. However,
+most implementations of
+.B malloc
+never shrink the heap anyway.
+.LP
+Currently the pools in
+.B buffers
+support strings with lengths that are powers of two between 8 and 4096
+inclusive.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR strings (3),
+.BR malloc (3)
+.SH VERSION
+@(#)buffers.3l	4.12 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

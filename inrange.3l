@@ -1,0 +1,216 @@
+.TH INRANGE 3-local "89/09/11"
+.SH NAME
+inrange, strange, getrange, freerange \- range checking functions
+.SH COPYRIGHT
+Copyright \(co 1990 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """inrange.h"""
+.LP
+.B RANGE *getrange(describe)
+.B char *describe;
+.LP
+.B int inrange(value,result,range)
+.B char *value;
+.B int *result;
+.B RANGE *range;
+.LP
+.B char *strange(value,range)
+.B char *value;
+.B RANGE *range;
+.LP
+.B int freerange(range)
+.B RANGE *range;
+.fi
+.SH DESCRIPTION
+.B inrange
+and the related functions
+provide range checking of numeric strings or translation
+of a string into a corresponding number or string. The range or
+translation mapping is specified as an ASCII
+string so that it can easily be extracted from a file,
+read from standard input, specified on the command line,
+culled from the environment, etc.
+.LP
+.I describe
+is a range description parsed by
+.BR getrange ,
+which returns a
+.B RANGE
+object. This object is in turn passed as the argument
+.I range
+in subsequent calls to
+.BR inrange ,
+.BR strange ,
+or
+.BR freerange .
+It is
+.B inrange
+and
+.B strange
+that actually perform the range checking or translation.
+Three flavors of range descriptions are supported.
+.I describe
+may contain a numeric range in
+the format "lowervalue:uppervalue" (inclusive), as in "10:20"; a set of
+blank separated keywords and numbers in the format "keyword=number",
+as in "A=0 B=2 C=4", describing how different strings will be translated into
+corresponding numbers; or a set of blank separated keywords and strings in
+.BR nextword (3l)
+style in the format "keyword=value", as in "USER=jsloan GROUP=systems",
+describing how different keyword strings will be translated into corresponding
+value strings. A
+.B RANGE
+object built with
+.B getrange
+from the first two formats is used by
+.BR inrange ,
+while a
+.B RANGE
+object built from the last format is used by
+.BR strange .
+.LP
+.B inrange
+returns 1 (true) if the string
+.IR value ,
+when converted into an integer, lies within the numeric range described by
+.IR range ;
+or if
+.IR value
+contains a string that is one of the keywords found in
+.IR range .
+If
+.B inrange
+returns 1 and
+.I result
+is not NULL, the corresponding numeric value is stored in
+.IR result .
+.LP
+.B strange
+(string range) returns a pointer to the value string of the
+keyword=value pair in the
+.B RANGE
+string associated with
+.IR range ,
+where the keyword matches the string
+.IR value .
+.LP
+Examples of
+.I describe
+strings are shown below.
+.TP 20
+.SM "10:20"
+numeric range 10 through 20
+.TP
+.SM ":20"
+numeric range 0 through 20
+.TP
+.SM "20"
+numeric range 0 through 20
+.TP
+.SM "10:"
+numeric range 10 through MAXINT
+.TP
+.SM ":"
+numeric range 0 through MAXINT
+.TP
+.SM "<null string>"
+numeric range 0 through MAXINT
+.TP
+.SM "A=0 B=2 C=4 =6"
+string range where a
+.I value
+of "A" will be translated by
+.B inrange
+into a
+.I result
+of 0, "B" into 2, "C" into 4, and a "" zero length string into 6. The
+zero length case is useful for establishing defaults when no value is
+given.
+.TP
+.SM "USER=tags CPU=sunlight SITE=mesalab"
+string range where
+.B strange
+will return "tags" when given "USER", "sunlight" when given "CPU",
+etc.
+.LP
+.B freerange
+frees memory associated with a RANGE object. The object is no longer
+usable after this has been done.
+.SH "RETURN VALUES"
+Upon success,
+.B getrange
+returns the address of a
+.B RANGE
+object. Otherwise, NULL is returned and errno set appropriately.
+.LP
+Upon success,
+.B inrange
+returns a 0 if
+.I value
+is out of range, 1 if it is in range, and -1, with errno set
+appropriately, if an error occurred.
+.LP
+.B freerange
+returns 0 upon success, and -1, with errno set appropriately, if an
+error occurred.
+.SH BUGS
+There is some overhead involved in parsing the
+.I describe
+string and allocating and building the
+.B RANGE
+object. Thus,
+.B getrange
+should only be called once for a particular range, and the
+corresponding
+.B RANGE
+object should be used for all subsequent calls to
+.B inrange
+which use the same range (in other words, if you have
+.B inrange
+inside a loop, put the associated
+.B getrange
+outside the loop).
+.LP
+Non-numeric values appearing where numeric values are expected
+are not detected. The C function
+.B atoi
+is used to perform the ASCII to integer translation, which translates
+as much of the string as possible, and simply returns
+zero if the string does not begin with a number. Thus, if
+.B getrange
+was given a
+.I describe
+string containing "A=a",
+.B inrange
+would return a
+.I result
+of 0 for a
+.I value
+of "A".
+.SH ERRORS
+.B getparm
+and the related functions will fail if when one or more of the following
+are true:
+.TP 20
+.SM EINVAL
+An invalid argument was passed, such as a NULL when an address was
+expected.
+.TP
+.SM ENOMEM
+A malloc(3) call failed to allocate memory.
+.LP
+The functions will also fail if the underlying nextword(3l),
+openparm(3l), or getparm(3l) functions fail, in which case
+the errno from the failing function call is returned.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR getparm (3l)
+.SH VERSION
+@(#)inrange.3l	4.3 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307
+

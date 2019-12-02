@@ -1,0 +1,151 @@
+.TH NMALLOC 3-local "94/06/02"
+.SH NAME
+nmalloc, nrealloc, nfree \- description
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #define NMALLOC_LIBTOOLS
+.LP
+.B #include """nmalloc.h"""
+.LP
+.B void *nmalloc(size)
+.B int size;
+.LP
+.B void *namalloc(size)
+.B int size 
+.LP
+.B void *nrealloc(ptr,size)
+.B void *ptr;
+.B int size 
+.LP
+.B void *narealloc(ptr,size)
+.B void *ptr;
+.B int size;
+.LP
+.B int nfree(ptr)
+.B void *ptr;
+.LP
+.B NMALLOCSTATS *nmalloced(stats)
+.B NMALLOCSTATS *stats;
+.LP
+.B int nmallocinfo(fp)
+.B FILE *fp;
+.LP
+.B int nmallocpool(fp)
+.B FILE *fp
+.LP
+.B FILE *nmalloclog(fp)
+.B FILE *fp;
+.LP
+.B #include """newmalloc.h"""
+.fi
+.SH DESCRIPTION
+The routines in this module are wrappers around the traditional
+.I libc
+.B malloc
+memory allocation functions so that dynamic memory allocation and
+deallocation can be instrumented.  A brief description of the functions
+are provided here. See
+.BR malloc (3)
+for a more thorough explanation.
+.LP
+.B nmalloc
+returns a pointer to a memory block no smaller than
+.I size
+bytes.
+.LP
+.B nrealloc
+resizes (if necessary) the memory block pointed to by
+.I ptr
+by allocating a new block no smaller than
+.I size
+bytes, copying the contents of the old block to the new, freeing the old
+block, and returning a pointer to the new block.
+.LP
+.B nfree
+frees the memory block pointed to by
+.IR ptr .
+.LP
+In addition, the functions
+.BR namalloc
+and
+.B narealloc
+are also provided. These function allow the application program to
+distinquish between memory blocks that may contain pointers and those
+than will contain only non-pointer, or
+.I atomic
+(hence the
+.I a
+in the names), data. This may make it simpler in the
+future to add intelligent garbage collection (although no such facility
+currently exists). Otherwise, these functions are equivalent to
+the non-atomic functions described above.
+.LP
+If the C preprocessor symbol
+.B NMALLOC_LIBTOOLS
+is not defined, these functions are mapped by the preprocessor into
+the traditional
+.I libc
+functions, making is easy to switch between instrumented and
+uninstrumented code, via for example a
+.I -DNMALLOC_LIBTOOLS
+command line switch for the C compiler.
+.LP
+If the header file
+.B newmalloc.h
+is used, the traditional
+.I libc
+functions are mapped by the C preprocessor into the corresponding
+.B nmalloc
+functions. This makes it easier to instrument an existing application,
+without changing all of its
+.BR malloc -related
+function calls.
+.LP
+.B nmalloced
+copies statistics regarding memory usage into a caller-supplied
+.I stats
+structure.
+.LP
+.B nmallocinfo
+prints statistics regarding memory usage onto
+.IR fp .
+It returns the total number of bytes currently in use.
+.LP
+.B nmallocpool
+prints information about every currently allocated memory block onto
+.IR fp .
+It returns the total number of bytes currently in use.
+.LP
+.B nmalloclog
+activates the tracing of function calls to the file pointer
+.IR fp .
+The function returns the prior value of the tracing file pointer. If
+.I fp
+is NULL, tracing is deactivated. Note that a NULL return is not an
+error; it merely means that tracing was deactivated prior to the call.
+.SH "RETURN VALUES"
+Functions returning a pointer return NULL upon error.
+Like the non-POSIX
+.BR free ,
+nfree returns a 1 upon success, and 0 upon error.
+.SH BUGS
+The meta-data used by
+.B nmallocinfo
+and
+.B nmallocpool
+are kept in the same area of memory as the
+.BR malloc ed
+memory blocks, and hence are easily corrupted by bugs in the application
+program.
+.SH "SEE ALSO"
+.BR malloc (3)
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)nmalloc.3l	4.2 94/06/02 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

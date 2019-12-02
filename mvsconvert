@@ -1,0 +1,220 @@
+#!/bin/sh
+# @(#)mvsconvert	4.1 94/05/16 jsloan@ncar.ucar.edu
+# mvsconvert cdir hdir pfile file1 [ file2 ... ]
+
+PGM=`basename $0`
+
+if [ $# -lt 5 ]; then
+	echo "usage: $PGM c-dir h-dir p-file 'file1 [ file2 ... ]' 'omit1 [ omit2 ... ]'" 1>&2
+	exit 1
+fi
+
+CDIR=$1; shift
+HDIR=$1; shift
+PFILE=$1; shift
+OLIST="$1"; shift
+DLIST="$1"; shift
+
+echo "$PGM: .c dir:   $CDIR" 1>&2
+echo "$PGM: .h dir:   $HDIR" 1>&2
+echo "$PGM: JCL file: $PFILE" 1>&2
+echo "$PGM: list:     $OLIST" 1>&2
+echo "$PGM: omit:     $DLIST" 1>&2
+
+NLIST=""
+CLIST=""
+HLIST=""
+ELIST=""
+EFILE=/usr/tmp/$PGM.ex.$$
+
+cp /dev/null $EFILE
+cp /dev/null $PFILE
+
+trap "rm -f $EFILE $PFILE; exit 1" 2 3 15
+
+for DIR in $CDIR $HDIR; do
+	if [ ! -d $DIR ]; then
+		mkdir $DIR
+	fi
+	if [ ! -d $DIR ]; then
+		echo "$PGM: could not find or make directory $DIR" 1>&2
+		exit 2
+	fi
+done
+
+##
+##	Step 1: generate a new name and rename each and every .c and
+##	.h file, and remember what we did so that we can do our editing
+##	later.
+##
+
+for OLD in $OLIST; do
+
+	##
+	##	Figure out if we need to omit this file
+	##
+
+	for DEL in $DLIST; do
+		if [ "$OLD" = "$DEL" ]; then
+			echo "$PGM: omitting $OLD" 1>&2
+			OLD=""
+			break
+		fi
+	done
+
+	if [ "$OLD" = "" ]; then
+		continue
+	fi
+
+	LEN=`expr length "$OLD"`
+	PF1=`echo "$OLD" | cut -d. -f1`
+	PF2=`echo "$PF1" | tr -dc '[a-zA-Z0-9]'`
+	PFX=`expr substr "$PF2" 1 6`
+	POS=`expr $LEN - 1`
+	SFX=`expr substr "$OLD" $POS 2`
+	TWO=`expr substr "$OLD" 1 2`
+
+	if [ "$SFX" = ".h" ]; then
+		DIR=$HDIR
+	elif [ "$SFX" = ".c" ]; then
+		DIR=$CDIR
+	else
+		continue
+	fi
+
+	NDX=0
+	NEW=""
+	while [ $NDX -lt 100 ]; do
+		NUM=$NDX
+		if [ $NDX -lt 10 ]; then
+			NUM="0"$NUM
+		fi
+		TRY=`echo $PFX$NUM | tr '[a-z]' '[A-Z]'`
+		if [ ! -f $DIR/$TRY ]; then
+			NEW=$TRY
+			break
+		else
+			NDX=`expr $NDX + 1`
+		fi
+	done
+
+	if [ "$NEW" != "" ]; then
+		echo "$PGM: converting $OLD to $DIR/$NEW" 1>&2
+		cat << EOF >> $DIR/$NEW
+#pragma nomargins nosequence
+#ifndef POSIX_LIBTOOLS
+#define POSIX_LIBTOOLS
+#endif
+#ifndef LOG2_LIBTOOLS
+#define LOG2_LIBTOOLS
+#endif
+#ifndef EBCDIC_LIBTOOLS
+#define EBCDIC_LIBTOOLS
+#endif
+#ifndef MVS_LIBTOOLS
+#define MVS_LIBTOOLS
+#endif
+#ifndef ANSI_LIBTOOLS
+#define ANSI_LIBTOOLS
+#endif
+EOF
+		cat $OLD >> $DIR/$NEW
+		STATUS=$?
+		if [ $STATUS -ne 0 ]; then
+			echo "$PGM: converting $OLD to $DIR/$NEW failed $STATUS" 1>&2
+		else
+			NLIST="$NLIST$DIR/$NEW "
+			if [ "$SFX" = ".h" ]; then
+				HLIST="$HLIST$NEW "
+				cat << EOF >> $EFILE
+g/^#[ 	]*include[ 	]/s/"$OLD"/"${NEW}.h"/
+EOF
+			elif [ "$TWO" = "eg" ]; then
+				ELIST="$ELIST$NEW "
+			elif [ "$SFX" = ".c" ]; then
+				CLIST="$CLIST$NEW "
+			fi
+		fi
+	else
+		echo "$PGM: could not convert $OLD" 1>&2
+	fi
+done
+
+echo "w" >> $EFILE
+echo "q" >> $EFILE
+
+##
+##	Step 2: edit everything to use the new header files. Note
+##	that if we're including stuff from somewhere else, this
+##	could get dicey.
+##
+
+for NEW in $NLIST; do
+	echo "$PGM: editing $NEW" 1>&2
+	ex $NEW < $EFILE
+	STATUS=$?
+	if [ $STATUS -ne 0 ]; then
+		echo "$PGM: editing $NEW failed $STATUS" 1>&2
+	fi
+done
+
+##
+##	Step 3: generate the JCL to compile the library.
+##
+
+echo "$PGM: generating compiler JCL" 1>&2
+
+cat << EOF >> $PFILE
+//MAKELIB JOB (43310016,8122),'MAKELIB',MSGCLASS=X,NOTIFY=ERICH
+/*JOBPARM L=200
+EOF
+
+for CFILE in $CLIST $ELIST; do
+	cat << EOF >> $PFILE
+//****** COMPILE $CFILE
+//$CFILE EXEC EDCC,CPARM='SO,EXP,LO',
+//  INFILE='MSS.PROD.LIBTOOLS.SOURCE($CFILE)',
+//  OUTFILE='MSS.PROD.LIBTOOLS.TEXTLIB($CFILE),DISP=SHR'
+//COMPILE.SYSLIB   DD
+//           DD  DISP=SHR,DSN=TCPIP.SEZACMAC
+//COMPILE.USERLIB DD DISP=SHR,DSN=MSS.PROD.LIBTOOLS.HEADER
+EOF
+done
+
+echo "$PGM: generating link JCL" 1>&2
+
+LINK=0
+for EFILE in $ELIST; do
+	LINK=`expr $LINK + 1`
+	cat << EOF >> $PFILE
+//****** LINK $EFILE
+//LINK$LINK EXEC EDCPL,LPARM='AMODE,RENT,LIST,XREF'
+//PLKED.SYSIN  DD  DISP=SHR,DSN=MSS.PROD.LIBTOOLS.TEXTLIB($EFILE)
+EOF
+
+	for CFILE in $CLIST; do
+		cat << EOF >> $PFILE
+//             DD  DISP=SHR,DSN=MSS.PROD.LIBTOOLS.TEXTLIB($CFILE)
+EOF
+	done
+
+	cat << EOF >> $PFILE
+//LKED.SYSLIB  DD
+//  DD
+//  DD  DISP=SHR,DSN=MSS.PROD.LOADLIB.V5
+//LKED.SYSLMOD  DD  DISP=SHR,DSN=MSS.TEST.CFTPLIB
+//LKED.SYSIN  DD  *
+   ENTRY CEESTART
+   MODE AMODE(31) RMODE(31)
+   SETCODE AC(1)
+   NAME $EFILE(R)
+/*
+EOF
+done
+
+cat << EOF >> $PFILE
+//
+EOF
+
+rm -f $EFILE
+exit 0

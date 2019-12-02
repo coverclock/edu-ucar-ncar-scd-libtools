@@ -1,0 +1,257 @@
+.TH TREES 3-local "94/05/16"
+.SH NAME
+tput, tget \- general routines to manage a binary tree
+.SH COPYRIGHT
+Copyright \(co 1990, 1991, 1992 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """trees.h"""
+.LP
+.B TREE *tput(rp,e,f)
+.B TREE **rp;
+.B TREE *e;
+.B int (*f)();
+.LP
+.B TREE *tget(r,e,f)
+.B TREE *r;
+.B TREE *e;
+.B int (*f)();
+.LP
+.B int tpostorder(r,g,vp)
+.B TREE *r;
+.B int (*g)();
+.B void *vp;
+.LP
+.B int tpreorder(r,g,vp)
+.B TREE *r;
+.B int (*g)();
+.B void *vp;
+.LP
+.B int tinorder(r,g,vp)
+.B TREE *r;
+.B int (*g)();
+.B void *vp;
+.LP
+.B int trevorder(r,g,vp)
+.B TREE *r;
+.B int (*g)();
+.B void *vp;
+.fi
+.SH DESCRIPTION
+The functions in the
+.B trees
+package implement general binary tree handling operations based on linked
+lists. A tree consists of a root and zero or more nodes.
+Nodes are structures that are inserted onto the tree. The root of
+a tree is simply a variable, initialized by the caller to NULL,
+which points to the node which, once inserted, forms the initial branches
+of the tree.
+.LP
+Nodes and roots have the general form
+.sp
+.nf
+.ft L
+struct treenode
+        {
+        struct treenode *       t_next;         /* for breadth-first */
+        struct treenode *       t_left;         /* left branch */
+        struct treenode *       t_right;        /* right branch */
+        };
+
+typedef struct treenode TREE;
+
+TREE * root;
+.ft P
+.fi
+.LP
+The only important detail, as far as the tree routines are
+concerned, is that the first item in the actual user data structure be
+a treenode structure.
+.LP
+.B tput
+adds, deletes, or modifies the value of a node on the tree.
+.I rp
+is a value/result parameter that is the address of the root of
+the tree (e.g. in the example above, &root).
+.I e
+is the address of a node structure which has a key identifying the
+node to be deleted, modified or added, and in the case of addition or
+modification, the corresponding value.
+.I f
+is a pointer to a function used to compare the key fields
+of two nodes, and to detect if the node indicates a delete operation.
+The signature of the function is
+.LP
+.nf
+.ft L
+int f(a,b)
+TREE *a;
+TREE *b;
+.ft P
+.fi
+.LP
+where
+.I a
+is a pointer to a node being processed (typically, the parameter
+.I e
+as passed to
+.BR tput ),
+and
+.I b
+is a pointer to a node already on the tree. If
+.I b
+is not NULL, the function must compare the key fields of the two nodes,
+returning -1, 0 or 1 (in the manner of
+.BR strcmp (3))
+if the key of
+.I a
+is less than, equal too, or greater than the key of
+.IR b .
+If
+.I b
+is NULL, the function must return true if
+.I a
+indicates a delete operation, and false (zero) otherwise. How a node
+passed as the argument
+.I e
+to
+.B tput
+indicates a delete operation is up to the implementation of the function
+.B f
+and the exact definition of the node structure.
+A simple example of the function
+.B f
+for the node structure shown above might be as follows.
+.LP
+.nf
+.ft L
+struct node
+	{
+	TREE *	n_tree;
+	char	n_key;
+	char	n_value;
+	};
+
+int
+nodecompare(a,b)
+struct node *a;
+struct node *b;
+        {
+        if (b==NULL)
+                return(a->n_value=='\\0');
+        else
+                {
+                if (a->n_key<b->n_key)
+                        return(-1);
+                else if (a->n_key>b->nkey)
+                        return(1);
+                else
+                        return(0);
+                }
+        }
+.ft P
+.fi
+.LP
+.B tget
+searches the tree for a node whose key value is the same as that
+of the parameter
+.IR e .
+.I r
+is the root of the tree (e.g. in the example above, root).
+.B tget
+uses the same comparator function
+.I f
+as
+.BR tput .
+.LP
+.BR tpostorder ,
+.BR tpreorder
+.B tinorder
+and
+.B trevorder
+are functions which traverse the entire tree, applying the supplied
+function
+.I g
+to each node. The signature of
+.I g
+is
+.LP
+.nf
+.ft L
+int g(a,vp)
+struct treenode *a;
+void *vp;
+.ft P
+.fi
+.LP
+where
+.I a
+is a pointer to the node currently being visited, and
+.I vp
+is a anonymous pointer to a data structure that is provided by the
+caller to the traversal function, and which in turn is passed to
+every call of
+.IR g .
+.I vp
+can be used to pass state information between successive
+calls without resorting to static variables, or it can be NULL and
+unused.
+.LP
+The function
+.I g
+returns an integer value. If it returns a zero,
+traversal continues; if the entire tree is traversed successfully,
+the traversal function also returns a zero. If
+.I g
+returns a non-zero value, the traversal is immediately abandoned
+and the traversal function returns the same value. The meaning
+of the non-zero value is completely up to the caller. For example,
+a postive value might indicate success, a negative value an error.
+.LP
+Each function traverses the tree in a different order.
+.B tinorder
+traverse the tree in ascending order (left branch, root, right branch)
+as specified by the function
+.I f
+used in
+.BR tput .
+In the example above, this would be increasing alphabetical (ASCII
+collating sequence) order. This could be used, for example, for printing
+the contents of a tree in alphabetical order.
+.B trevorder
+traverses the tree in decending order (right branch, root, left branch).
+.B tpostorder
+traverses the tree in postorder (left branch, right branch, root)
+This is useful for freeing
+dynamically allocated nodes, since it insures that a node will not be
+freed before the children to which it holds links.
+.B tpreorder
+traverses the tree in preorder (depth first). This is useful for copying
+trees, preventing the new tree from degenerating into a linear list
+(providing the source tree is not a degenerate case).
+.SH "RETURN VALUES"
+.B tinit
+returns the address of the freshly initialized node.
+.LP
+.B tput
+returns the address of the node that was replaced or deleted, perhaps
+so that its memory can be freed.
+If the node was not found (in which case either the node was added, or
+the delete failed), a NULL is returned.
+.LP
+.B tget
+returns the address of the node if it was found, NULL otherwise.
+.LP
+The traversal functions
+.B tpreorder
+etc. return zero if the entire tree was traversed successfully.
+Otherwise they return the non-zero return value of the function
+.IR g .
+.SH FILES
+libtools.a
+.SH VERSION
+@(#)trees.3l	4.5 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

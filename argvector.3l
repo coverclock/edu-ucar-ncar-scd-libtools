@@ -1,0 +1,97 @@
+.TH ARGVECTOR 3-local "94/05/16"
+.SH NAME
+argvector - data structure for parameter passing
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """argvector.h"""
+.LP
+.B PARCEL *bundlevector(argc,argv,parcelp)
+.B int argc;
+.B char **argv;
+.B PARCEL *parcelp;
+.LP
+.B char **unbundlevector(parcel)
+.B PARCEL parcel;
+.LP
+.B PORTFOLIO *stuffvector(argc,argv,portfolio)
+.B int argc;
+.B char **argv;
+.B PORTFOLIO *portfolio;
+.LP
+.B char **unstuffvector(portfolio)
+.B PORTFOLIO *portfolio;
+.LP
+.B int freevector(argv)
+.B char **argv;
+.fi
+.SH DESCRIPTION
+This module contains a set of functions which together provide a
+mechanism for efficiently handling parameters under a variety of
+circumstances. Parameters are in the form of keyword-value pairs, where
+the unique keyword and its value are ASCII strings.  There are seven
+complementary data structures: PARCEL, PACKAGE, PILE, PACKET,
+PARMFILE, PORTFOLIO, and ARGVECTOR.
+.LP
+.B bundlevector
+bundles parameters from an argument vector
+.I argv
+of length
+.I argc
+into
+.IR parcelp .
+Processing begins with the first item in the vector, and is terminated
+when argc is exhausted or a NULL pointer
+is found.
+.B bundlevector
+is useful for handling both argument vectors and environmental vectors.
+.LP
+.B unbundlevector
+unbundles (creates) an argument vector from the contents of
+.IR parcel .
+The argument vector is dynamically allocated and should be freed if the
+memory associated with it is to be recovered and reused.
+.LP
+.B unstuffvector
+and
+.B stuffvector
+are corresponding routines that deal with PORTFOLIOS instead of
+PARCELS.
+.LP
+.B freevector
+releases the storage allocated to an argument vector produced by
+.B unbundlevector
+and
+.BR unstuffvector .
+.LP
+An ARGVECTOR is a traditional argument vector in the usual UNIX
+sense, an array of pointers to strings, each string containing
+a single argument. When a PARCEL or a PORTFOLIO is converted into
+an ARGVECTOR, each argument in the resulting vector is a single
+keyword-value pair in the form of the string "\fIkeyword\fR=\fIvalue\fR"
+(minus the double quotation marks shown here).
+Conversely, this is what is expected when converting in the other
+direction.
+.SH "RETURN VALUES"
+All functions which return a pointer return NULL when an error is
+detected; errno is set appropriately. All functions which return
+an integer return a negative number when an error is detected; errno
+is set appropriately.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR parcel (3l),
+.BR portfolio (3l),
+.BR package (3l),
+.BR pile (3l),
+.BR packet (3l),
+.BR parmfile (3l),
+.BR escapes (3l),
+.BR nextparser (3l)
+.SH VERSION
+@(#)argvector.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

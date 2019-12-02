@@ -1,0 +1,190 @@
+.TH PORTFOLIO 3-local "94/05/16"
+.SH NAME
+portfolio - data structure for parameter passing
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """portfolio.h"""
+.LP
+.B PORTFOLIO initportfolio(portfolio)
+.B PORTFOLIO *portfolio;
+.LP
+.B char *unstuff(keyword,portfolio)
+.B char *keyword;
+.B PORTFOLIO *portfolio;
+.LP
+.B PORTFOLIO *stuff(keyword,value,portfolio)
+.B char *keyword;
+.B char *value;
+.B PORTFOLIO *portfolio;
+.LP
+.B PORTFOLIO *stuffp(keyword,value,portfolio)
+.B STRING keyword;
+.B STRING value;
+.B PORTFOLIO *portfolio;
+.LP
+.B PORTFOLIO *restuff(from,to)
+.B PORTFOLIO *from;
+.B PORTFOLIO *to;
+.LP
+.B PORTFOLIO *enstuff(from,to)
+.B PORTFOLIO *from;
+.B PORTFOLIO *to;
+.LP
+.B int countportfolio(portfolio)
+.B PORTFOLIO *portfolio;
+.LP
+.B int freeportfolio(portfolio)
+.B PORTFOLIO *portfolio;
+.LP
+.B int travportfolio(portfolio,g,vp)
+.B PORTFOLIO *portfolio;
+.B int (*g)(SKEYVAL *node, void *vp);
+.B void *vp;
+.fi
+.SH DESCRIPTION
+This module contains a set of functions which together provide a
+mechanism for efficiently handling parameters under a variety of
+circumstances. Parameters are in the form of keyword-value pairs, where
+the unique keyword and its value are ASCII strings.  There are seven
+complementary data structures: PORTFOLIO, PACKAGE, PILE, PACKET,
+PARMFILE, PORTFOLIO and ARGVECTOR.
+.LP
+In the function signatures in the synopsis above, the formal parameters
+have the following meanings.
+.LP
+.I portfolio
+is a pointer to the PORTFOLIO data structure.
+.LP
+.I keyword
+points to a character string containing a keyword string, and
+.I value
+points to a character string containing a value string corresponding to the
+keyword.
+.LP
+.B initportfolio
+initializes
+.IR portfolio .
+The contents of an existing PORTFOLIO must be freed using
+.B freeportfolio
+before it can be reinitialized; otherwise, dynamically allocated
+storage will be lost.
+.LP
+.B unstuff
+extracts and returns a pointer to the value corresponding to
+.I keyword
+in
+.IR portfolio .
+If the keyword cannot be found, NULL is returned.
+.LP
+.B stuff
+inserts or replaces the parameter containing
+.I keyword
+and
+.I value
+into 
+.IR portfolio .
+If
+.I value
+is NULL, the parameter corresponding to
+.I keyword
+is deleted. It is not an error to try to delete a non-existent
+parameter. The function returns the value of
+.IR portfolio .
+.LP
+.B stuffp
+is identical to
+.B stuff
+except that the pointers
+.I keyword
+and
+.I value
+are used directly, rather than making copies. This is a useful
+optimization that assumes the arguments are string buffers allocated
+using
+.BR buffers (3l).
+.LP
+.B restuff
+stuffs the contents of
+.I from
+into
+.IR to .
+The function returns the the value of
+.IR to .
+Nodes in
+.B to
+which have keywords matching those in
+.BR from
+are replaced.
+.LP
+.B enstuff
+is identical to
+.BR restuff ,
+except that nodes in
+.B to
+which have keywords matching those in
+.BR from
+are not replaced. This is useful for augmenting a PORTFOLIO with default
+parameters.
+.LP
+.B countportfolio
+returns the number of nodes in
+.IR portfolio .
+.LP
+.B freeportfolio
+frees all dynamically acquired memory associated with
+.IR portfolio .
+.LP
+.B travportfolio
+traverses a PORTFOLIO, applying the function
+.I g
+to each node in the PORTFOLIO. The function is passed a pointer to the
+.IR node ,
+and a void pointer
+.I vp
+which it may use to carry state. As long as
+.I g
+returns zero, the traversal continues; otherwise the traveral is
+abandoned and
+.I travportfolio
+returns final return code from
+.IR g .
+.LP
+A PORTFOLIO is a data structure containing keyword-value pairs
+in a form which can
+be accessed quickly by the application. It is currently implemented as
+a skiplist. The nodes are
+stored in the skiplist in ASCII collating sequence by keyword.
+.SH "RETURN VALUES"
+All functions which return a pointer return NULL when an error is
+detected; errno is set appropriately. All functions which return
+an integer return a negative number when an error is detected; errno
+is set appropriately.
+.SH ERRORS
+Virtually the only errors which are returned are the following.
+.TP 20
+.SM EINVAL
+An invalid argument, such as NULL where an address was expected, was
+passed to the function.
+.TP
+.SM ENOMEM
+Memory could not be allocated for the dynamic structures.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR parcel (3l),
+.BR package (3l),
+.BR pile (3l),
+.BR packet (3l),
+.BR parmfile (3l),
+.BR skeyval (3l),
+.BR skiplists (3l),
+.BR escapes (3l),
+.BR nextparser (3l)
+.SH VERSION
+@(#)portfolio.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

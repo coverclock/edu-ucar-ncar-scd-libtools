@@ -1,0 +1,147 @@
+.TH PILE 3-local "94/05/16"
+.SH NAME
+pile - data structure for parameter passing
+.SH COPYRIGHT
+Copyright \(co 1993 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """pile.h"""
+.LP
+.B PILE unbundlepile(parcel)
+.B PARCEL parcel;
+.LP
+.B PARCEL *bundlepile(pile,parcelp)
+.B PILE pile;
+.B PARCEL *parcelp;
+.LP
+.B PILE unstuffpile(portfolio)
+.B PORTFOLIO *portfolio;
+.LP
+.B PORTFOLIO *stuffpile(pile,portfolio)
+.B PILE pile;
+.B PORTFOLIO *portfolio;
+.LP
+.B int freepile(pile)
+.B PILE pile;
+.LP
+.B int countpile(list)
+.B PILE list;
+.LP
+.B PILE sortpile(list)
+.B PILE list;
+.LP
+.B char *indexpile(ndx,buffer)
+.B unsigned int ndx;
+.B char *buffer;
+.fi
+.SH DESCRIPTION
+This module contains a set of functions which together provide a
+mechanism for efficiently handling parameters under a variety of
+circumstances. Parameters are in the form of keyword-value pairs, where
+the unique keyword and its value are ASCII strings.  There are seven
+complementary data structures: PARCEL, PACKAGE, PILE, PACKET,
+PARMFILE, PORTFOLIO, and ARGVECTOR.
+.LP
+In the function signatures in the synopsis above, the formal parameters
+have the following meanings.
+.LP
+.I parcel
+is a variable which contains the pointer that is the root of the tree
+that is the PARCEL data structure.
+.LP
+.I parcelp
+is a value/result argument which is the address of a PARCEL variable
+(i.e. &parcel).
+.LP
+.I portfolio
+points to a PORTFOLIO data structure.
+.LP
+.I pile
+is a pointer to an argv-like PILE of parameters.
+.LP
+.B unbundlepile
+unbundles (converts)
+.I parcel
+into a PILE suitable for sequential access. A pointer to the PILE is
+returned.
+The memory associated with the PILE data structure is
+dynamically acquired and should eventually be freed if the memory
+is to be recovered and reused.
+.LP
+.B bundlepile
+bundles the contents of
+.I pile
+into
+.IR parcelp .
+The function returns the value of
+.IR parcelp .
+.LP
+.B unstuffpile
+and
+.B stuffpile
+are corresponding routines that deal with PORTFOLIOS instead of
+PARCELS.
+.LP
+.B freepile
+frees all dynamically acquired memory associated with
+.IR pile .
+.LP
+.B countpile
+returns the number of keyword-value pointer pairs in the given
+null-terminated
+.IR pile .
+.LP
+.B sortpile
+sorts the keyword-value pairs in the given
+.I pile
+by keyword in
+ascending ASCII order.
+.LP
+.B indexpile
+creates a character string in
+.I buffer
+containing the ASCII representation of the integer
+.IR ndx .
+The ASCII number has leading zeros so that when used as a keyword,
+.B sortpile
+will perform a correct numerical sort. The address of
+.I buffer
+is returned.
+.LP
+A PILE is an argv-like array of the form (char **) which contains
+successive
+.I pairs
+of pointers, the first in each pair pointing to a
+keyword string, and the next pointing to the corresponding value
+string. A PILE is terminated by a pair of NULL pointers. A PILE is
+useful for sequentially accessing of all the parameters in a PARCEL.
+.SH "RETURN VALUES"
+All functions which return a pointer return NULL when an error is
+detected; errno is set appropriately. All functions which return
+an integer return a negative number when an error is detected; errno
+is set appropriately.
+.SH ERRORS
+Virtually the only errors which are returned are the following.
+.TP 20
+.SM EINVAL
+An invalid argument, such as NULL where an address was expected, was
+passed to the function.
+.TP
+.SM ENOMEM
+Memory could not be allocated for the dynamic structures.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+.BR parcel (3l),
+.BR portfolio (3l),
+.BR package (3l),
+.BR packet (3l),
+.BR parmfile (3l),
+.BR escapes (3l),
+.BR nextparser (3l)
+.SH VERSION
+@(#)pile.3l	4.11 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307

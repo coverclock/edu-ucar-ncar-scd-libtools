@@ -1,0 +1,248 @@
+.TH SKIPLISTS 3-local "94/05/16"
+.SH NAME
+sklget, skladd, sklput, skldel \- implementation of skiplists
+.SH COPYRIGHT
+Copyright \(co 1993, 1994 University Corporation for Atmospheric Research
+.LP
+All Rights Reserved
+.SH SYNOPSIS
+.nf
+.B #include """skiplists.h"""
+.LP
+.B void *sklput(skiplist,up,comparator,vp)
+.B SKIPLIST *skiplist;
+.B void *up;
+.B int (*comparator)();
+.B void *vp;
+.LP
+.B void *skladd(skiplist,up,comparator,vp)
+.B SKIPLIST *skiplist;
+.B void *up;
+.B int (*comparator)();
+.B void *vp;
+.LP
+.B void *skldel(skiplist,up,comparator,vp)
+.B SKIPLIST *skiplist;
+.B void *up;
+.B int (*comparator)();
+.B void *vp;
+.LP
+.B void *sklget(skiplist,up,comparator,vp)
+.B SKIPLIST *skiplist;
+.B void *up;
+.B int (*comparator)();
+.B void *vp;
+.LP
+.B int (*comparator)(up1,up2,vp)
+.B void *up1;
+.B void *up2;
+.B void *vp;
+.LP
+.B SKIPLIST *sklinit(skiplist)
+.B SKIPLIST *skiplist;
+.LP
+.B int sklinorder(skiplist,applicator,vp)
+.B SKIPLIST *skiplist;
+.B int (*applicator)();
+.B void *vp;
+.LP
+.B int (*applicator)(up,vp)
+.B void *up;
+.B void *vp;
+.LP
+.B int skldump(skiplist,dumper,vp,fp)
+.B SKIPLIST *skiplist;
+.B int (*dumper)();
+.B void *vp;
+.B FILE *fp;
+.LP
+.B int (*dumper)(up,vp,fp)
+.B void *up;
+.B void *vp;
+.B FILE *fp;
+.LP
+.B int sklfree(skiplist,freer,vp)
+.B SKIPLIST *skiplist;
+.B int (*freer)();
+.B void *vp;
+.LP
+.B int (*freer)(up,vp)
+.B void *up;
+.B void *vp;
+.LP
+.B int sklcount(skiplist)
+.B SKIPLIST *skiplist;
+.LP
+.B int sklpool(fp)
+.B FILE *fp;
+.LP
+.B void sklshutdown()
+.fi
+.SH DESCRIPTION
+From the original source code by Dr. Pugh: "Skip Lists are a
+probabilistic alternative to balanced trees, as described in the June
+1990 issue of CACM and were invented by William Pugh in 1987." See
+the references cited below for more information. This implementation of
+skiplists treats items to be stored in a skiplist as opaque pointers
+which are only referenced using caller-supplied functions. (This would
+be a whole lot easier in C++.)
+.LP
+In all calls,
+.I vp
+is a pointer which is passed along to user-supplied functions called
+by skiplist functions (for example,
+.IR comparator ,
+.IR dumper ,
+.IR applicator ,
+.IR freer )
+allowing the user-supplied functions to carry along state. None of the
+skiplist functions use
+.I vp
+other than to pass it along to the user-supplied function being called,
+so it can be different for each call, or passed as ((void *)0) if it is
+not needed.
+.LP
+.B sklput
+inserts an item into a skiplist. If an item with the same key already
+exists in the skiplist, it is replaced.
+.B skladd
+inserts an item into a skiplist. If an item with the same key already
+exists in the skiplist, the new item is appended in a FIFO fashion.
+.B skldel
+deletes an item from a skiplist.
+.B sklget
+finds an item from a skiplist whose key matches that of the supplied
+item.
+In each case,
+.I skiplist
+points to the skiplist;
+.I up
+is a pointer to the user item to be inserted, deleted or found (and
+which is otherwise completely opaque); and
+.I comparator
+points to a function when given pointers
+.I up1
+and
+.I up2
+to two user items, returns -1, 0 or +1 depending on whether the item
+pointed to by
+.I up1
+is less than, equal to, or greater than the item pointed to by
+.IR up2 .
+.LP
+.B sklinit
+initializes the skiplist pointed to by
+.I skiplist
+to an empty state. No check is made as to whether there is any memory
+associated with the skiplist prior to initializing it.
+.LP
+.B sklinorder
+applies a function pointed to by
+.I applicator
+to each item in
+.IR skiplist .
+The skiplist is traversed as long as the function pointed to by
+.I applicator
+returns zero; returning any other value causes
+.B sklinorder
+to terminate the traversal and return the non-zero value.
+.LP
+.B sklcount
+counts and returns the number of items in
+.IR skiplist .
+.LP
+.B skldump
+dumps
+.I skiplist
+to
+.I fp .
+The function pointer
+.I dumper
+(which can be NULL) points to a function which will be applied to each node,
+allowing the caller to dump data from the user item.
+.LP
+.B sklfree
+frees all memory associated with
+.IR skiplist .
+The function pointer
+.I freer
+(which can be NULL) points to a function which will be applied to
+each user item in the skiplist. This allows the caller to free
+storage associated with dynamically acquired user items.
+.LP
+.B sklpool
+prints on
+.I fp
+statistics regarding the internal memory usage of the skiplist
+module. This is mostly used for debugging memory leaks.
+It returns the number of bytes currently in use.
+.LP
+.B sklshutdown
+causes the skiplist module to release all unused storage held in reserve,
+without affecting any user skiplists.
+.SH "RETURN VALUES"
+.BR sklput ,
+.B skladd
+and
+.B skldel
+return a pointer to the user item replaced or deleted.
+If no item was replaced or deleted, they return their
+.I up
+argument.
+.B sklget
+always returns its
+.I up
+argument.
+Each function returns NULL if the operation was unsuccessful.
+This includes if
+.I sjlget
+or
+.I skldel
+could not find the requested item.
+This allows the caller to handle memory management of dynamically
+allocated user items, but requires the caller to compare pointer values
+to determine if the return value is the new item or the old.
+.LP
+.B sklinorder
+returns zero if the skiplist was completely traversed, otherwise the
+non-zero return code from the function
+.IR h .
+.LP
+.B skldump
+returns the number of items in the dumped skiplist.
+.LP
+.B sklfree
+returns zero if okay, otherwise the non-zero return code from the
+function
+.IR g .
+.LP
+.B sklcount
+returns the number of items in the skiplist.
+.SH BUGS
+Unlike trees, skiplists have a maximum possible size. However, in this
+implementation, it's really really really big. If I interpret [Pugh
+1990] correctly, it's around 4^16 nodes.  This MaxSize is based on
+.sp
+.nf
+MaxLevels=log_1/p(MaxSize)
+.fi
+.sp
+where p=0.25 and MaxLevels=16.
+.SH FILES
+libtools.a
+.SH "SEE ALSO"
+Pugh, William, "Skip Lists: A Probabilistic Alternative to
+Balanced Trees", CACM, June 1990
+.sp
+Pugh, William, "Concurrent Maintenance of Skip Lists",
+UMIACS-TR-90-80, U. of Md. Inst. for Adv. Comp. Sci., April 1989
+.sp
+Pugh, William, "A Skip List Cookbook", UMIACS-TR-89-72.1,
+U. of Md. Inst. for Adv. Comp. Sci., July 1989
+.sp
+Pugh, William, original C and Pascal source code and documents,
+mimsy.umd.edu:pub/skipLists
+.SH VERSION
+@(#)skiplists.3l	4.1 94/05/16 jsloan@ncar.ucar.edu
+.SH AUTHOR
+John Sloan, NCAR/SCD, P.O. Box 3000, Boulder CO 80307
